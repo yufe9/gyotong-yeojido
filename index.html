@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#770E06">
+  <title>교통여지도</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="title-row">
+      <h1><img class="logo" src="img/logo.svg" alt="교통여지도"></h1>
+      <button id="help-btn" class="icon-btn" aria-label="도움말">?</button>
+    </div>
+    <div class="chips" id="zones" role="radiogroup" aria-label="구역"></div>
+    <div class="chips-row">
+      <div class="chips" id="cats" role="group" aria-label="분류"></div>
+      <select id="sort" aria-label="정렬">
+        <option value="rating">별점순</option>
+        <option value="recommend">추천순</option>
+        <option value="distance">가까운순</option>
+      </select>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div id="map" class="map"><p class="map-msg">지도를 불러오는 중…</p></div>
+    <button id="fit-btn" class="map-btn" aria-label="전체 보기" hidden>⤢</button>
+
+    <section id="sheet" class="sheet peek" aria-label="가게 목록">
+      <div class="handle" id="handle" role="button" tabindex="0" aria-label="목록 펼치기/접기"><span></span></div>
+      <div class="sheet-head">
+        <strong id="count"></strong>
+        <button id="spot-clear" class="link-btn" hidden>전체 목록으로</button>
+      </div>
+      <ul id="list" class="list"></ul>
+    </section>
+
+    <section id="card" class="card" hidden aria-live="polite"></section>
+  </main>
+
+  <dialog id="help">
+    <h2>교통여지도</h2>
+    <p>한국교통대 학생들이 추천한 충주 맛집·카페·주점을 원유철이 직접 다니며 정리한 지도입니다.</p>
+    <ul>
+      <li><b>별점</b>: 원유철이 같은 기준으로 매긴 5점 만점 점수</li>
+      <li><b>추천 수</b>: 그곳을 적어 낸 학생 수</li>
+      <li><b>거리</b>: 교통대(대학로 50)에서 걷는 길 거리</li>
+      <li id="help-date"></li>
+    </ul>
+    <p>영업시간·가격은 바뀔 수 있으니 가기 전에 "네이버에서 보기"로 확인하세요.</p>
+    <form method="dialog"><button>닫기</button></form>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
