@@ -40,12 +40,61 @@ export function relayout(root, mutate) {
   layout.update(mutate);
 }
 
-// 카드 → 상세: 사진이 커지며 이어지고, 정보가 차례로 들어온다
-export function detailIn(hero, parts) {
+// 화면 바꾸기: 새 화면이 살짝 떠오르며 겹쳐 나타난다
+export function viewIn(view) {
+  if (!on() || !view) return;
+  A.animate(view, { opacity: [0, 1], y: [10, 0], duration: 320, ease: 'out(3)' });
+}
+
+// 카드 → 상세. from 은 누른 카드 사진의 화면 위치(없으면 주소로 바로 들어온 것).
+// 사진: 카드 자리에서 상세 사진 자리로 커진다. 비율이 다르므로 균일하게 키우고 위아래는 clip-path 로 잘라
+//       사진이 일그러지지 않게 한다(FLIP). 이어서 유리 시트가 스프링으로 올라오고, 제목은 단어마다 솟아오른다.
+export function detailIn({ hero, from, sheet, title, parts, bar }) {
+  if (!on()) return;
+  // 타임라인의 각 동작은 시작 시각 전까지 출발 값을 적용하지 않는다. 그래서 글자가 먼저 보였다가 다시 올라오는
+  // 일이 없도록, 화면을 그리기 전에 모두 출발 상태(숨김)로 놓는다.
+  const split = title && (A.splitText ?? A.text?.split)?.(title, { words: { wrap: 'clip' } });
+  if (split) A.utils.set(split.words, { y: '100%' });
+  A.utils.set(sheet, { y: 80, opacity: 0 });
+  A.utils.set(parts, { y: 12, opacity: 0 });
+  if (bar) A.utils.set(bar, { y: '100%' });
+  if (!from) A.utils.set(hero, { opacity: 0 });
+  const tl = A.createTimeline({ defaults: { ease: 'out(4)' } });
+  const to = hero.getBoundingClientRect();
+  if (from && to.width) {
+    const s = from.width / to.width;
+    const cut = Math.max(0, (to.height - from.height / s) / 2); // 확대 전 좌표에서 위아래로 잘라 낼 양
+    const tx = from.left + from.width / 2 - (to.left + to.width / 2);
+    const ty = from.top + from.height / 2 - (to.top + to.height / 2);
+    tl.add(hero, {
+      x: [tx, 0], y: [ty, 0], scale: [s, 1],
+      clipPath: [`inset(${cut}px 0px ${cut}px 0px round ${from.radius / s}px)`, 'inset(0px 0px 0px 0px round 0px)'],
+      duration: 520,
+    });
+  } else {
+    tl.add(hero, { opacity: [0, 1], scale: [1.06, 1], duration: 520 });
+  }
+  tl.add(sheet, { y: [80, 0], opacity: [0, 1], ease: A.spring({ bounce: 0.18, duration: 520 }) }, '-=380');
+  if (split) {
+    tl.add(split.words, { y: ['100%', '0%'], duration: 520, delay: A.stagger(45), ease: 'outExpo', onComplete: () => split.revert() }, '-=420');
+  }
+  tl.add(parts, { opacity: [0, 1], y: [12, 0], duration: 360, delay: A.stagger(50) }, '-=420');
+  if (bar) tl.add(bar, { y: ['100%', '0%'], duration: 420, ease: 'out(3)' }, '<<');
+}
+
+// 상세 → 홈: 홈이 돌아오고, 방금 본 카드가 제자리에 살짝 내려앉는다
+export function homeBack(view, card) {
+  if (!on()) return;
+  A.animate(view, { opacity: [0, 1], duration: 260, ease: 'out(2)' });
+  if (card) A.animate(card, { scale: [0.94, 1], ease: A.spring({ bounce: 0.35, duration: 520 }) });
+}
+
+// 지도로: 검색 캡슐은 위에서 내려오고, 사진 띠는 옆에서 차례로 들어온다
+export function mapIn(top, items) {
   if (!on()) return;
   A.createTimeline({ defaults: { ease: 'out(3)' } })
-    .add(hero, { scale: [0.86, 1], opacity: [0, 1], duration: 420 })
-    .add(parts, { opacity: [0, 1], y: [12, 0], duration: 320, delay: A.stagger(40) }, '-=260');
+    .add(top, { y: [-20, 0], opacity: [0, 1], duration: 380 })
+    .add(items, { x: [28, 0], opacity: [0, 1], duration: 360, delay: A.stagger(40) }, '-=260');
 }
 
 // 버튼·탭 누름: 1 → 0.96 → 1

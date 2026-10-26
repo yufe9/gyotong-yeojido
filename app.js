@@ -1,5 +1,6 @@
 import { ZONES, CATEGORIES, FOOD_TYPES, visible, spots, limitBox, clamp, distanceText, foodType, foodPhoto, topPicks, countBy } from './logic.js';
 import * as motion from './motion.js';
+import * as glass from './glass.js';
 
 // JavaScript 키는 브라우저에 공개된다. 카카오 콘솔의 JavaScript SDK 도메인 제한으로 보호한다.
 const KAKAO_JS_KEY = 'fcc7025814ea14defac67db2babb5c5a';
@@ -50,7 +51,7 @@ function buildHome() {
     </button>`).join('');
 
   $('foods').innerHTML = Object.entries(FOOD_TYPES).map(([key, f]) => `
-    <button class="food-chip" type="button" data-food="${key}" aria-pressed="false">
+    <button class="food-chip glass" type="button" data-food="${key}" aria-pressed="false">
       ${foodImg(key, f.label, { sizes: '40px' })}<span>${f.label}</span><span class="n"></span>
     </button>`).join('');
 
@@ -59,7 +60,7 @@ function buildHome() {
 
   const picks = topPicks(places, 5);
   $('picks').innerHTML = picks.map(p => `
-    <a class="pick c-${p.category}" href="${href(p)}">
+    <a class="pick glass c-${p.category}" href="${href(p)}">
       <span class="txt">
         <span class="eyebrow">★ ${p.rating.toFixed(1)} · 추천 ${p.recommendCount}명 · ${esc(SHORT[p.zone] ?? p.zone)}</span>
         <span class="title">${esc(p.name)}</span>
@@ -75,9 +76,11 @@ function buildHome() {
     <li class="card c-${p.category}" data-id="${esc(p.id)}">
       <a href="${href(p)}">
         <div class="ph-wrap"><div class="ph">${placeImg(p)}</div><span class="badge">${p.category}</span></div>
-        <h3 class="name">${esc(p.name)}</h3>
-        <p class="meta">${metaLine(p)}</p>
-        <p class="price">${esc(p.priceRange ?? '가격 정보 없음')}</p>
+        <div class="c-info glass">
+          <h3 class="name">${esc(p.name)}</h3>
+          <p class="meta">${metaLine(p)}</p>
+          <p class="price">${esc(p.priceRange ?? '가격 정보 없음')}</p>
+        </div>
       </a>
     </li>`;
   }).join('') + '<li class="empty is-hidden">조건에 맞는 곳이 없어요. 필터를 지워 보세요.</li>';
@@ -217,10 +220,10 @@ function renderDetail(p) {
   const el = $('detail');
   el.className = `view detail c-${p.category}`;
   el.innerHTML = `
-    <button class="back" type="button" aria-label="뒤로">${icon('back')}</button>
+    <button class="back glass glass-map" type="button" aria-label="뒤로">${icon('back')}</button>
     <div class="hero">${placeImg(p, { lazy: false, sizes: '(min-width: 760px) 760px, 100vw' })}</div>
-    ${OLD_IMG.has(foodPhoto(p)) ? '' : '<p class="ai-note">AI 생성 이미지 · 실제 메뉴와 다를 수 있음</p>'}
-    <div class="d-body">
+    <div class="d-sheet glass" data-refract>
+      ${OLD_IMG.has(foodPhoto(p)) ? '' : '<p class="ai-note">AI 생성 이미지 · 실제 메뉴와 다를 수 있음</p>'}
       <div class="d-title"><h1 tabindex="-1">${esc(p.name)}</h1><span class="badge">${p.category}</span></div>
       <p class="d-addr">${esc(SHORT[p.zone] ?? p.zone)} · ${esc(FOOD_TYPES[t].label)}</p>
       <div class="pills">
@@ -235,7 +238,7 @@ function renderDetail(p) {
         ${panels.map((html, i) => `<div class="panel" role="tabpanel" id="panel-${i}" aria-labelledby="tab-${i}" tabindex="0"${i ? ' hidden' : ''}>${html}</div>`).join('')}
       </div>
     </div>
-    <div class="actions">
+    <div class="actions glass glass-map">
       <a class="btn primary" href="#/map/${encodeURIComponent(p.id)}">${icon('pin')}지도에서 보기</a>
       ${naver ? `<a class="btn secondary" href="${esc(naver)}" target="_blank" rel="noopener">${icon('out')}네이버에서 보기</a>` : ''}
     </div>`;
@@ -258,7 +261,16 @@ function renderDetail(p) {
     pick(i);
     tabs[i].focus();
   });
-  motion.detailIn(el.querySelector('.hero img'), [...el.querySelectorAll('.d-title, .d-addr, .pills, .tabs')]);
+}
+
+// 상세가 열린 뒤(스크롤을 맨 위로 옮긴 뒤) 부른다: 카드 사진 자리에서 이어지는 진입 동작
+function animateDetail() {
+  const el = $('detail');
+  motion.detailIn({
+    hero: el.querySelector('.hero'), from: pendingFrom, sheet: el.querySelector('.d-sheet'), title: el.querySelector('h1'),
+    parts: [...el.querySelectorAll('.d-title .badge, .d-addr, .pills, .tabs')], bar: el.querySelector('.actions'),
+  });
+  pendingFrom = null;
 }
 
 // 앱 안에서 넘어왔으면 뒤로, 주소로 바로 들어왔으면 홈으로
@@ -402,10 +414,13 @@ function ensureMap(focusId) {
 }
 
 // ── 화면 전환 ───────────────────────────────────────────
-let current = null, homeScroll = 0;
+let current = null, homeScroll = 0, lastDetailId = null;
+let pendingFrom = null; // 누른 카드 사진의 화면 위치(카드 → 상세 이어지는 동작용)
 function show(view) {
   if (current === 'home') homeScroll = scrollY;
+  const prev = current;
   current = view;
+  document.body.dataset.view = view;
   $('home').hidden = view !== 'home';
   $('detail').hidden = view !== 'detail';
   $('mapview').hidden = view !== 'map';
@@ -414,6 +429,7 @@ function show(view) {
     if (t.dataset.tab === view) t.setAttribute('aria-current', 'page');
     else t.removeAttribute('aria-current');
   }
+  return prev;
 }
 
 const mapFocus = () => {
@@ -428,21 +444,35 @@ function route() {
     if (!p) return location.replace('#/');
     show('detail');
     renderDetail(p);
+    lastDetailId = p.id;
     document.title = `${p.name} · 교통여지도`;
     scrollTo(0, 0);
     $('detail').querySelector('h1').focus({ preventScroll: true });
+    glass.refresh($('detail'));
+    animateDetail();
     return;
   }
   if (/^#\/map(\/|$)/.test(location.hash)) {
-    show('map');
+    const prev = show('map');
     document.title = '지도 · 교통여지도';
     ensureMap(mapFocus());
+    if (prev !== 'map') motion.mapIn($('mapview').querySelector('.map-top'), [...$('strip').children].slice(0, 4));
     return;
   }
-  show('home');
+  const prev = show('home');
   document.title = '교통여지도';
   requestAnimationFrame(() => scrollTo(0, homeScroll));
+  if (prev === 'detail') motion.homeBack($('home'), cardEls.get(lastDetailId));
+  else if (prev === 'map') motion.viewIn($('home'));
 }
+
+// 가게로 가는 링크를 누르는 순간 그 사진 칸의 자리를 기억해 둔다(상세 사진이 그 자리에서 커진다)
+document.addEventListener('click', e => {
+  const box = e.target.closest('a[href^="#/p/"]')?.querySelector('.ph, img');
+  if (!box) return;
+  const r = box.getBoundingClientRect();
+  pendingFrom = { left: r.left, top: r.top, width: r.width, height: r.height, radius: 20 };
+}, true);
 addEventListener('hashchange', () => { inAppNav++; route(); });
 
 // 버튼·탭 누름 반응
@@ -466,6 +496,7 @@ async function start() {
   buildHome();
   update({ animate: false });
   route();
+  glass.refresh();
 
   // 첫 화면 등장: 애니메이션 라이브러리가 금방 오면 떠오르게, 늦으면 그냥 보여 준다
   const A = await Promise.race([motion.ready, new Promise(r => setTimeout(() => r(null), 600))]);

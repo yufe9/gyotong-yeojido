@@ -2,7 +2,7 @@
 
 한국교통대 학생들이 추천한 충주 맛집·카페·주점 95곳을 음식 그림으로 고르고, 필요할 때 카카오맵에서 위치를 보는 모바일 웹앱.
 
-- 서버 없는 정적 사이트: `index.html` + `style.css` + `app.js` (+ `logic.js` 순수 계산, `motion.js` 애니메이션)
+- 서버 없는 정적 사이트: `index.html` + `style.css` + `app.js` (+ `logic.js` 순수 계산, `motion.js` 애니메이션, `glass.js` 유리 반사광·굴절)
 - 화면: 홈(분류 타일·음식 종류 칩·구역·오늘의 추천·카드 목록) → 가게 상세 → 지도. 주소는 `#/`, `#/p/<가게>`, `#/map`, `#/map/<가게>`.
 - 데이터: `data/places.json` — 원본 엑셀을 `scripts/build_places.py`로 한 번 변환(좌표 포함). 앱은 실행 중 카카오 로컬 API를 부르지 않는다.
 - 지도: 카카오맵 JavaScript SDK. JavaScript 키는 공개용이며 카카오 콘솔의 허용 도메인으로 보호한다.
@@ -54,4 +54,5 @@ REST API 키는 환경 변수 `KAKAO_REST_API_KEY` 또는 `~/.config/kakao/.env`
 - 음식 사진: Gemini로 생성(원유철). 아직 남은 옛 그림의 원본 사진은 `img/food/CREDITS.md` (CC0·퍼블릭 도메인·CC BY)
 - 로고 글씨: 송명체 Song Myung (SIL OFL 1.1)를 윤곽선으로 변환 (`img/logo.svg`, 지금 화면에서는 쓰지 않음)
 - 애니메이션: Anime.js (MIT)
-- 색: 한국교통대 온라인 컬러시스템 (KNUT Burgundy `#770E06`, KNUT Red `#AB2328`)
+- 색: 삿포로 테마(하늘 `#d3e5ef`, 잉크 `#0c1a24`, 뮤트 `#3f5464`, 가로등빛 구리색 강조 `#9a4c0c`). 값은 `style.css` 맨 위 `:root`에만 있다
+- 유리: Liquid Glass 기법(블러 + 반사층 + 포인터 반사광). SVG 굴절은 크롬 계열 PC에서 검색창·탭 바·상세 시트에만

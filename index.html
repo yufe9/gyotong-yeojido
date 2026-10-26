@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#d3e5ef">
   <meta name="description" content="교통대생이 추천한 충주 맛집 95곳">
   <title>교통여지도</title>
   <link rel="icon" href="img/pin-food.svg" type="image/svg+xml">
@@ -27,12 +27,15 @@
     <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   </svg>
 
+  <!-- 하늘 바탕(지도 화면에서는 숨김) -->
+  <div class="sky" aria-hidden="true"><span class="blob"></span><span class="blob"></span></div>
+
   <!-- 홈: 사진으로 고르기 -->
   <main id="home" class="view home" aria-labelledby="home-title">
     <header class="home-head">
       <h1 id="home-title" class="large-title">교통여지도</h1>
       <p class="lede">교통대생이 추천한 충주 맛집 95곳</p>
-      <label class="search">
+      <label class="search glass" data-refract>
         <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
         <input id="q" type="search" placeholder="가게 이름이나 메뉴로 찾기" autocomplete="off" enterkeyhint="search" aria-label="가게 이름이나 메뉴로 찾기">
         <button class="clear" type="button" aria-label="검색어 지우기" hidden><svg class="ic" aria-hidden="true"><use href="#i-clear"/></svg></button>
@@ -50,7 +53,7 @@
     </section>
 
     <section class="block" aria-label="구역">
-      <div id="zones" class="segmented" role="radiogroup" aria-label="구역"></div>
+      <div id="zones" class="segmented glass" role="radiogroup" aria-label="구역"></div>
     </section>
 
     <section id="picks-block" class="block" aria-labelledby="picks-title">
@@ -62,7 +65,7 @@
     <section class="block" aria-labelledby="list-title">
       <div class="block-head">
         <h2 id="list-title">둘러보기 <span id="count" class="count"></span></h2>
-        <label class="sort">
+        <label class="sort glass">
           <span class="visually-hidden">정렬</span>
           <select id="sort">
             <option value="rating">별점순</option>
@@ -83,14 +86,14 @@
   <section id="mapview" class="view mapview" hidden aria-label="지도">
     <div id="map" class="map"><p class="map-msg">지도를 불러오는 중…</p></div>
     <div class="map-top">
-      <label class="search capsule">
+      <label class="search capsule glass glass-map">
         <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
         <input id="mq" type="search" placeholder="지도에서 찾기" autocomplete="off" enterkeyhint="search" aria-label="지도에서 찾기">
         <button class="clear" type="button" aria-label="검색어 지우기" hidden><svg class="ic" aria-hidden="true"><use href="#i-clear"/></svg></button>
       </label>
-      <button id="fit" class="round-btn" type="button" aria-label="전체 보기"><svg class="ic" aria-hidden="true"><use href="#i-fit"/></svg></button>
+      <button id="fit" class="round-btn glass glass-map" type="button" aria-label="전체 보기"><svg class="ic" aria-hidden="true"><use href="#i-fit"/></svg></button>
     </div>
-    <section id="sheet" class="sheet" aria-label="가게 사진 목록">
+    <section id="sheet" class="sheet glass glass-map" aria-label="가게 사진 목록">
       <div id="grabber" class="grabber" role="button" tabindex="0" aria-label="목록 올리기·내리기"><span></span></div>
       <div class="sheet-head">
         <strong id="mcount"></strong>
@@ -101,13 +104,13 @@
   </section>
 
   <!-- 하단 탭 바 -->
-  <nav id="tabbar" class="tabbar" aria-label="화면">
+  <nav id="tabbar" class="tabbar glass glass-map" data-refract aria-label="화면">
     <a href="#/" class="tab" data-tab="home"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg><span>홈</span></a>
     <a href="#/map" class="tab tab-main" data-tab="map" aria-label="지도"><span class="orb"><svg class="ic" aria-hidden="true"><use href="#i-map"/></svg></span><span>지도</span></a>
     <button type="button" class="tab" id="help-btn"><svg class="ic" aria-hidden="true"><use href="#i-help"/></svg><span>도움말</span></button>
   </nav>
 
-  <dialog id="help" aria-labelledby="help-title">
+  <dialog id="help" class="glass glass-map" aria-labelledby="help-title">
     <h2 id="help-title">교통여지도</h2>
     <p>한국교통대 학생들이 추천한 충주 맛집·카페·주점을 원유철이 직접 다니며 정리한 지도입니다.</p>
     <ul>
