@@ -3,45 +3,112 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#770E06">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="교통대생이 추천한 충주 맛집 95곳">
   <title>교통여지도</title>
+  <link rel="icon" href="img/pin-food.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/Pretendard-Bold.subset.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="top">
-    <div class="title-row">
-      <h1><img class="logo" src="img/logo.svg" alt="교통여지도"></h1>
-      <button id="help-btn" class="icon-btn" aria-label="도움말">?</button>
-    </div>
-    <div class="chips" id="zones" role="radiogroup" aria-label="구역"></div>
-    <div class="chips-row">
-      <div class="chips" id="cats" role="group" aria-label="분류"></div>
-      <select id="sort" aria-label="정렬">
-        <option value="rating">별점순</option>
-        <option value="recommend">추천순</option>
-        <option value="distance">가까운순</option>
-      </select>
-    </div>
-  </header>
+  <!-- 아이콘: SF Symbols 느낌의 선 아이콘 -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m15.5 15.5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-clear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="m9 9 6 6m0-6-6 6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6zM9 4v14m6-12v14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9.6 9.6a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.1" fill="currentColor"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="currentColor"/></symbol>
+    <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="13" cy="4.5" r="1.8" fill="currentColor"/><path d="m10 21 2-6 2.5 2.5V21M8 12l2.5-4.5 3.5 1 1.5 3.5L18 13M12.5 8.5 11 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 19c.5-3 2.7-4.5 5.5-4.5s5 1.5 5.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16.5" cy="9" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 14.6c2.4 0 4 1.3 4.5 3.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="10" r="2.3" fill="currentColor"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
 
-  <main class="stage">
-    <div id="map" class="map"><p class="map-msg">지도를 불러오는 중…</p></div>
-    <button id="fit-btn" class="map-btn" aria-label="전체 보기" hidden>⤢</button>
+  <!-- 홈: 사진으로 고르기 -->
+  <main id="home" class="view home" aria-labelledby="home-title">
+    <header class="home-head">
+      <h1 id="home-title" class="large-title">교통여지도</h1>
+      <p class="lede">교통대생이 추천한 충주 맛집 95곳</p>
+      <label class="search">
+        <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="q" type="search" placeholder="가게 이름이나 메뉴로 찾기" autocomplete="off" enterkeyhint="search" aria-label="가게 이름이나 메뉴로 찾기">
+        <button class="clear" type="button" aria-label="검색어 지우기" hidden><svg class="ic" aria-hidden="true"><use href="#i-clear"/></svg></button>
+      </label>
+    </header>
 
-    <section id="sheet" class="sheet peek" aria-label="가게 목록">
-      <div class="handle" id="handle" role="button" tabindex="0" aria-label="목록 펼치기/접기"><span></span></div>
-      <div class="sheet-head">
-        <strong id="count"></strong>
-        <button id="spot-clear" class="link-btn" hidden>전체 목록으로</button>
-      </div>
-      <ul id="list" class="list"></ul>
+    <section class="block" aria-labelledby="cats-title">
+      <h2 id="cats-title" class="visually-hidden">분류</h2>
+      <div id="cats" class="tiles"></div>
     </section>
 
-    <section id="card" class="card" hidden aria-live="polite"></section>
+    <section class="block" aria-labelledby="foods-title">
+      <div class="block-head"><h2 id="foods-title">무엇을 먹을까요</h2></div>
+      <div id="foods" class="scroller food-chips" role="group" aria-labelledby="foods-title"></div>
+    </section>
+
+    <section class="block" aria-label="구역">
+      <div id="zones" class="segmented" role="radiogroup" aria-label="구역"></div>
+    </section>
+
+    <section id="picks-block" class="block" aria-labelledby="picks-title">
+      <div class="block-head"><h2 id="picks-title">오늘의 추천</h2></div>
+      <div id="picks" class="scroller picks"></div>
+      <div id="dots" class="dots" aria-hidden="true"></div>
+    </section>
+
+    <section class="block" aria-labelledby="list-title">
+      <div class="block-head">
+        <h2 id="list-title">둘러보기 <span id="count" class="count"></span></h2>
+        <label class="sort">
+          <span class="visually-hidden">정렬</span>
+          <select id="sort">
+            <option value="rating">별점순</option>
+            <option value="recommend">추천순</option>
+            <option value="distance">가까운순</option>
+          </select>
+        </label>
+      </div>
+      <p id="filters" class="filters" hidden></p>
+      <ul id="grid" class="grid"></ul>
+    </section>
   </main>
 
-  <dialog id="help">
-    <h2>교통여지도</h2>
+  <!-- 가게 상세 -->
+  <section id="detail" class="view detail" hidden aria-live="polite"></section>
+
+  <!-- 지도 -->
+  <section id="mapview" class="view mapview" hidden aria-label="지도">
+    <div id="map" class="map"><p class="map-msg">지도를 불러오는 중…</p></div>
+    <div class="map-top">
+      <label class="search capsule">
+        <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="mq" type="search" placeholder="지도에서 찾기" autocomplete="off" enterkeyhint="search" aria-label="지도에서 찾기">
+        <button class="clear" type="button" aria-label="검색어 지우기" hidden><svg class="ic" aria-hidden="true"><use href="#i-clear"/></svg></button>
+      </label>
+      <button id="fit" class="round-btn" type="button" aria-label="전체 보기"><svg class="ic" aria-hidden="true"><use href="#i-fit"/></svg></button>
+    </div>
+    <section id="sheet" class="sheet" aria-label="가게 사진 목록">
+      <div id="grabber" class="grabber" role="button" tabindex="0" aria-label="목록 올리기·내리기"><span></span></div>
+      <div class="sheet-head">
+        <strong id="mcount"></strong>
+        <button id="spot-clear" class="text-btn" type="button" hidden>전체 보기</button>
+      </div>
+      <ul id="strip" class="scroller strip"></ul>
+    </section>
+  </section>
+
+  <!-- 하단 탭 바 -->
+  <nav id="tabbar" class="tabbar" aria-label="화면">
+    <a href="#/" class="tab" data-tab="home"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg><span>홈</span></a>
+    <a href="#/map" class="tab tab-main" data-tab="map" aria-label="지도"><span class="orb"><svg class="ic" aria-hidden="true"><use href="#i-map"/></svg></span><span>지도</span></a>
+    <button type="button" class="tab" id="help-btn"><svg class="ic" aria-hidden="true"><use href="#i-help"/></svg><span>도움말</span></button>
+  </nav>
+
+  <dialog id="help" aria-labelledby="help-title">
+    <h2 id="help-title">교통여지도</h2>
     <p>한국교통대 학생들이 추천한 충주 맛집·카페·주점을 원유철이 직접 다니며 정리한 지도입니다.</p>
     <ul>
       <li><b>별점</b>: 원유철이 같은 기준으로 매긴 5점 만점 점수</li>
@@ -50,7 +117,8 @@
       <li id="help-date"></li>
     </ul>
     <p>영업시간·가격은 바뀔 수 있으니 가기 전에 "네이버에서 보기"로 확인하세요.</p>
-    <form method="dialog"><button>닫기</button></form>
+    <p class="credit">음식 그림은 가게 사진이 아니라 메뉴 종류를 보여 주는 예시입니다. Wikimedia Commons·Flickr의 CC0·CC BY 사진에서 배경을 지워 합성했습니다. 작가와 라이선스: <a href="img/food/CREDITS.md" target="_blank" rel="noopener">사진 출처</a></p>
+    <form method="dialog"><button class="btn primary">닫기</button></form>
   </dialog>
 
   <script type="module" src="app.js"></script>
