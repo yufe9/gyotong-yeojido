@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { visible, spots, limitBox, clamp, distanceText, SORTS, FOOD_TYPES, foodType, search, topPicks, countBy } from './logic.js';
+import { visible, spots, limitBox, clamp, distanceText, SORTS, FOOD_TYPES, foodType, foodPhoto, search, topPicks, countBy } from './logic.js';
 
 const { places } = JSON.parse(readFileSync(new URL('./data/places.json', import.meta.url), 'utf8'));
 const all = new Set(['음식점', '카페', '주점']);
@@ -70,6 +70,19 @@ test('95곳 모두 음식 종류가 하나씩 붙는다', () => {
   };
   for (const [type, names] of Object.entries(expect)) for (const n of names) assert.equal(kind(n), type, n);
   assert.equal(Object.keys(countBy(places, foodType)).length, Object.keys(FOOD_TYPES).length, '안 쓰는 종류가 없다');
+});
+
+test('사진은 같은 종류 안에서 이름과 첫 메뉴로 변형을 고른다', () => {
+  const photo = name => foodPhoto(places.find(p => p.name.startsWith(name)));
+  assert.equal(photo('생각나는감자탕'), 'gukbap-bone');
+  assert.equal(photo('두꺼비네'), 'gukbap', '첫 메뉴가 순대국이면 뒤에 뼈해장국이 있어도 기본 사진');
+  assert.equal(photo('일번지순대국'), 'gukbap');
+  assert.equal(photo('큰집막창'), 'bbq-makchang');
+  assert.equal(photo('엄정분식'), 'bbq-makchang', '첫 메뉴가 막창구이');
+  assert.equal(photo('제주돼지촌'), 'bbq', '첫 메뉴가 삼겹살이면 뒤에 막창이 있어도 기본 사진');
+  assert.equal(photo('제갈덮밥'), 'rice', '덮밥 가게의 곱창은 변형 대상이 아니다');
+  assert.equal(photo('리밍'), 'jjamppong');
+  for (const p of places) assert.ok(foodPhoto(p).startsWith(foodType(p)), p.name);
 });
 
 test('검색은 이름·메뉴를 띄어쓰기·대소문자 없이 찾는다', () => {

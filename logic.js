@@ -80,6 +80,19 @@ export function foodType(p) {
   return FOOD_RULES.find(([re]) => re.test(text))?.[1] ?? null;
 }
 
+// 같은 종류 안에서 다른 사진을 쓰는 가게. 칩은 늘리지 않고 사진만 바꾼다.
+// 이름과 첫 메뉴만 본다(뒤쪽 곁들이 메뉴로 대표 사진이 바뀌지 않게).
+const PHOTO_VARIANTS = {
+  gukbap: [[/뼈해장국|감자탕/, 'gukbap-bone']],
+  bbq: [[/막창|곱창/, 'bbq-makchang']],
+};
+
+export function foodPhoto(p) {
+  const t = foodType(p);
+  const text = `${p.name} ${String(p.menu ?? '').split(',')[0]}`;
+  return PHOTO_VARIANTS[t]?.find(([re]) => re.test(text))?.[1] ?? t;
+}
+
 // 띄어쓰기·대소문자를 무시하고 이름·메뉴·음식 종류에서 찾는다.
 const norm = s => String(s ?? '').toLowerCase().replace(/\s+/g, '');
 export function search(places, query) {

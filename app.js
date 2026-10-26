@@ -1,4 +1,4 @@
-import { ZONES, CATEGORIES, FOOD_TYPES, visible, spots, limitBox, clamp, distanceText, foodType, topPicks, countBy } from './logic.js';
+import { ZONES, CATEGORIES, FOOD_TYPES, visible, spots, limitBox, clamp, distanceText, foodType, foodPhoto, topPicks, countBy } from './logic.js';
 import * as motion from './motion.js';
 
 // JavaScript 키는 브라우저에 공개된다. 카카오 콘솔의 JavaScript SDK 도메인 제한으로 보호한다.
@@ -20,8 +20,19 @@ const safeUrl = u => (/^https:\/\//.test(u ?? '') ? u : null);
 const icon = name => `<svg class="ic" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 const href = p => `#/p/${encodeURIComponent(p.id)}`;
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-const foodImg = (key, alt, lazy = true) =>
-  `<img src="img/food/${key}.webp" alt="${esc(alt)}" width="800" height="800" decoding="async"${lazy ? ' loading="lazy"' : ''}>`;
+// AI 사진은 960px(<key>.webp)·480px(<key>-480.webp) 두 크기. 아직 AI 사진이 없는 그림은 예전 800px 누끼 한 장이라 회색 원에 넣는다.
+const OLD_IMG = new Set(['cafeteria', 'coffee', 'bread', 'dessert', 'pub', 'cat-cafe']);
+const PHOTO_ALT = { 'gukbap-bone': '뼈해장국', 'bbq-makchang': '막창' }; // 변형 사진의 음식 이름
+const foodImg = (key, alt, { lazy = true, sizes = '50vw' } = {}) => {
+  const attrs = `alt="${esc(alt)}" decoding="async"${lazy ? ' loading="lazy"' : ''}`;
+  return OLD_IMG.has(key)
+    ? `<img class="old" src="img/food/${key}.webp" width="800" height="800" ${attrs}>`
+    : `<img src="img/food/${key}.webp" srcset="img/food/${key}-480.webp 480w, img/food/${key}.webp 960w" sizes="${sizes}" width="960" height="960" ${attrs}>`;
+};
+const placeImg = (p, opts) => {
+  const key = foodPhoto(p);
+  return foodImg(key, PHOTO_ALT[key] ?? FOOD_TYPES[foodType(p)].label, opts);
+};
 const metaLine = p =>
   `<span class="star">★ ${p.rating.toFixed(1)}</span><span class="sep"></span><span>${distanceText(p.distanceKm)}</span><span class="sep"></span><span>추천 ${p.recommendCount}명</span>`;
 
@@ -34,13 +45,13 @@ function buildHome() {
   const counts = countBy(places, p => p.category);
   $('cats').innerHTML = CATEGORIES.map(c => `
     <button class="tile c-${c}" type="button" data-cat="${c}" aria-pressed="false">
-      <span class="ph">${foodImg(CAT_IMG[c], `${c} 대표 메뉴`, false)}</span>
+      <span class="ph">${foodImg(CAT_IMG[c], `${c} 대표 메뉴`, { lazy: false, sizes: '33vw' })}</span>
       <span class="name">${c}</span><span class="num">${counts[c]}곳</span>
     </button>`).join('');
 
   $('foods').innerHTML = Object.entries(FOOD_TYPES).map(([key, f]) => `
     <button class="food-chip" type="button" data-food="${key}" aria-pressed="false">
-      ${foodImg(key, f.label)}<span>${f.label}</span><span class="n"></span>
+      ${foodImg(key, f.label, { sizes: '40px' })}<span>${f.label}</span><span class="n"></span>
     </button>`).join('');
 
   $('zones').innerHTML = ZONES.map(z =>
@@ -54,17 +65,16 @@ function buildHome() {
         <span class="title">${esc(p.name)}</span>
         <span class="line">${esc(p.summary)}</span>
       </span>
-      ${foodImg(foodType(p), FOOD_TYPES[foodType(p)].label)}
+      ${placeImg(p, { lazy: false, sizes: '40vw' })}
     </a>`).join('');
   $('dots').innerHTML = picks.map((_, i) => `<span class="${i ? '' : 'on'}"></span>`).join('');
 
   // 카드는 한 번만 만들고, 필터는 보이기·순서만 바꾼다(FLIP 재배치를 위해 같은 요소를 유지).
   $('grid').innerHTML = places.map(p => {
-    const t = foodType(p);
     return `
     <li class="card c-${p.category}" data-id="${esc(p.id)}">
       <a href="${href(p)}">
-        <div class="ph-wrap"><div class="ph">${foodImg(t, FOOD_TYPES[t].label)}</div><span class="badge">${p.category}</span></div>
+        <div class="ph-wrap"><div class="ph">${placeImg(p)}</div><span class="badge">${p.category}</span></div>
         <h3 class="name">${esc(p.name)}</h3>
         <p class="meta">${metaLine(p)}</p>
         <p class="price">${esc(p.priceRange ?? '가격 정보 없음')}</p>
@@ -208,7 +218,8 @@ function renderDetail(p) {
   el.className = `view detail c-${p.category}`;
   el.innerHTML = `
     <button class="back" type="button" aria-label="뒤로">${icon('back')}</button>
-    <div class="hero">${foodImg(t, FOOD_TYPES[t].label, false)}</div>
+    <div class="hero">${placeImg(p, { lazy: false, sizes: '(min-width: 760px) 760px, 100vw' })}</div>
+    ${OLD_IMG.has(foodPhoto(p)) ? '' : '<p class="ai-note">AI 생성 이미지 · 실제 메뉴와 다를 수 있음</p>'}
     <div class="d-body">
       <div class="d-title"><h1 tabindex="-1">${esc(p.name)}</h1><span class="badge">${p.category}</span></div>
       <p class="d-addr">${esc(SHORT[p.zone] ?? p.zone)} · ${esc(FOOD_TYPES[t].label)}</p>
@@ -359,9 +370,8 @@ function renderStrip(items) {
   $('mcount').textContent = state.spot ? `${state.spot.label} · ${stripItems.length}곳` : `${stripItems.length}곳`;
   $('spot-clear').hidden = !state.spot;
   $('strip').innerHTML = stripItems.length ? stripItems.map(p => {
-    const t = foodType(p);
     return `<li class="c-${p.category}"><button type="button" data-id="${esc(p.id)}" aria-current="${p.id === selectedId}">
-      <div class="ph">${foodImg(t, FOOD_TYPES[t].label)}</div>
+      <div class="ph">${placeImg(p, { sizes: '160px' })}</div>
       <div class="name">${esc(p.name)}</div><div class="meta">${metaLine(p)}</div>
     </button></li>`;
   }).join('') : '<li class="empty">조건에 맞는 곳이 없어요.</li>';
