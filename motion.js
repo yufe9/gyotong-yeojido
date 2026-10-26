@@ -49,8 +49,9 @@ export function viewIn(view) {
 // 카드 → 상세. from 은 누른 카드 사진의 화면 위치(없으면 주소로 바로 들어온 것).
 // 사진: 카드 자리에서 상세 사진 자리로 커진다. 비율이 다르므로 균일하게 키우고 위아래는 clip-path 로 잘라
 //       사진이 일그러지지 않게 한다(FLIP). 이어서 유리 시트가 스프링으로 올라오고, 제목은 단어마다 솟아오른다.
-export function detailIn({ hero, from, sheet, title, parts, bar }) {
+export function detailIn({ hero, from, sheet, title, parts, bar, panel }) {
   if (!on()) return;
+  const to = hero.getBoundingClientRect(); // 패널을 움직이기 전에 사진의 도착 자리를 잰다
   // 타임라인의 각 동작은 시작 시각 전까지 출발 값을 적용하지 않는다. 그래서 글자가 먼저 보였다가 다시 올라오는
   // 일이 없도록, 화면을 그리기 전에 모두 출발 상태(숨김)로 놓는다.
   const split = title && (A.splitText ?? A.text?.split)?.(title, { words: { wrap: 'clip' } });
@@ -59,9 +60,28 @@ export function detailIn({ hero, from, sheet, title, parts, bar }) {
   A.utils.set(parts, { y: 12, opacity: 0 });
   if (bar) A.utils.set(bar, { y: '100%' });
   if (!from) A.utils.set(hero, { opacity: 0 });
+  if (panel) A.utils.set(panel, { x: 40, opacity: 0 });
   const tl = A.createTimeline({ defaults: { ease: 'out(4)' } });
-  const to = hero.getBoundingClientRect();
-  if (from && to.width) {
+  if (panel) tl.add(panel, { x: 0, opacity: 1, duration: 320, ease: 'out(3)' }, 0); // PC: 오른쪽에서 패널이 들어온다
+  if (from && to.width && panel && from.src) {
+    // PC 패널은 스크롤 상자라 밖으로 나간 사진이 잘려 보이지 않는다. 그래서 진짜 사진은 숨기고,
+    // 맨 위층에 띄운 복사본이 클릭한 자리에서 패널 사진 자리까지 날아간 뒤 진짜와 바뀐다.
+    const ghost = document.createElement('div');
+    ghost.className = `fly-ghost${from.old ? ' is-old' : ''}`;
+    Object.assign(ghost.style, { left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px`, borderRadius: `${from.radius}px` });
+    const img = new Image();
+    img.src = from.src; img.alt = '';
+    ghost.append(img);
+    document.body.append(ghost);
+    A.utils.set(hero, { opacity: 0 });
+    const r = parseFloat(getComputedStyle(panel).borderTopLeftRadius) || 0;
+    tl.add(ghost, {
+      left: to.left, top: to.top, width: to.width, height: to.height,
+      borderTopLeftRadius: r, borderTopRightRadius: r, borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
+      duration: 520,
+      onComplete: () => { A.utils.set(hero, { opacity: 1 }); ghost.remove(); },
+    }, 0);
+  } else if (from && to.width) {
     const s = from.width / to.width;
     const cut = Math.max(0, (to.height - from.height / s) / 2); // 확대 전 좌표에서 위아래로 잘라 낼 양
     const tx = from.left + from.width / 2 - (to.left + to.width / 2);
@@ -143,4 +163,16 @@ export function sheetDrag(sheet, handle, { collapsedY, onChange }) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); set(!open); }
   });
   return { set, isOpen: () => open, refresh: () => drag?.refresh() };
+}
+
+// 마우스를 올리면 카드가 살짝 떠오른다(150ms). 목록 재배치(FLIP)는 카드 <li> 를 움직이므로 안쪽 링크를 움직인다
+export function hoverLift(root, selector) {
+  const fine = matchMedia('(hover: hover) and (pointer: fine)');
+  const lift = (e, y) => {
+    const el = e.target.closest(selector);
+    if (!el || el.contains(e.relatedTarget) || !on() || !fine.matches) return;
+    A.animate(el, { y, duration: 150, ease: 'out(2)' });
+  };
+  root.addEventListener('pointerover', e => lift(e, -4));
+  root.addEventListener('pointerout', e => lift(e, 0));
 }

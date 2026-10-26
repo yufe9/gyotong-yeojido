@@ -30,6 +30,18 @@
   <!-- 하늘 바탕(지도 화면에서는 숨김) -->
   <div class="sky" aria-hidden="true"><span class="blob"></span><span class="blob"></span></div>
 
+  <!-- PC(1024px 이상) 왼쪽 사이드바. 검색·구역·음식 칩·정렬은 app.js 가 홈에서 이곳으로 옮겨 온다(복제하지 않음) -->
+  <aside id="side" class="side glass" aria-label="찾기와 가게 목록">
+    <nav class="segmented side-seg" aria-label="화면">
+      <a href="#/" data-tab="home">홈</a>
+      <a href="#/map" data-tab="map">지도</a>
+      <button type="button" disabled title="4단계에서 열려요">명소 <small>준비 중</small></button>
+    </nav>
+    <div id="side-top" class="side-top"></div>
+    <p id="side-count" class="side-count"></p>
+    <ul id="side-list" class="side-list"></ul>
+  </aside>
+
   <!-- 홈: 사진으로 고르기 -->
   <main id="home" class="view home" aria-labelledby="home-title">
     <header class="home-head">

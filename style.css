@@ -87,6 +87,10 @@ img { display: block; max-width: 100%; height: auto; } /* width/height 속성은
 .scroller { display: flex; gap: var(--s2); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-snap-type: x mandatory; }
 .scroller::-webkit-scrollbar { display: none; }
 
+.side { display: none; } /* PC 사이드바: 1024px 이상에서만 */
+.segmented button:disabled { color: var(--label-2); cursor: not-allowed; opacity: .7; }
+.segmented button small { font: 400 11px/1 var(--font); margin-left: 4px; }
+
 /* ── 하늘 바탕: 지도가 아닌 화면 뒤에서 색 덩어리 2개가 천천히 떠다닌다(중심은 화면 모서리 바깥) ── */
 .sky { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
 .sky .blob {
@@ -178,11 +182,12 @@ body[data-view="map"] .sky { display: none; }
 
 /* iOS 세그먼트 컨트롤 */
 .segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 3px; border-radius: var(--r-md); background: var(--fill); }
-.segmented button {
+.segmented button, .segmented a {
+  display: grid; place-items: center; text-decoration: none;
   min-height: var(--tap); border: 0; border-radius: 8px; background: none; font: 600 14px/1 var(--font); color: var(--label);
   transition: background-color .2s, box-shadow .2s;
 }
-.segmented [aria-checked="true"], .segmented [aria-selected="true"] { background: var(--snow); color: var(--label); box-shadow: inset 0 0 0 1.5px var(--accent), 0 3px 8px var(--shadow); }
+.segmented [aria-checked="true"], .segmented [aria-selected="true"], .segmented [aria-current="page"] { background: var(--snow); color: var(--label); box-shadow: inset 0 0 0 1.5px var(--accent), 0 3px 8px var(--shadow); }
 
 /* 오늘의 추천 캐러셀 */
 .picks { margin: 0 calc(var(--gutter) * -1); padding: 0 var(--gutter); scroll-padding: var(--gutter); gap: var(--s3); }
@@ -353,13 +358,72 @@ dialog form .btn { width: 100%; }
   .tiles { grid-template-columns: repeat(3, minmax(0, 200px)); }
   .pick { width: min(60%, 520px); }
 }
-@media (min-width: 960px) {
-  :root { --t-large: 700 34px/1.2 var(--font); }
+/* 640~1023px 태블릿: 모바일 구조 그대로, 카드 3열(위 규칙). 아래부터 PC */
+
+/* ── PC(1024px 이상): Mac 의 애플 지도처럼 왼쪽 유리 사이드바 + 오른쪽 넓은 화면 ──
+   사이드바: 화면 버튼 줄(홈·지도·명소) → 제목·검색 → 음식 칩(줄바꿈) → 구역 → 정렬 → 가게 목록.
+   검색·칩·구역·정렬은 app.js 의 placeControls() 가 홈에서 옮겨 온다. 상세는 오른쪽 위에 뜬 패널. */
+@media (min-width: 1024px) {
+  :root { --side-w: 400px; --edge: 16px; --gutter: 32px; }
+  .tabbar { display: none; }
+
+  .side {
+    display: flex; flex-direction: column; gap: var(--s3); position: fixed; z-index: 20;
+    top: var(--edge); bottom: var(--edge); left: var(--edge); width: var(--side-w);
+    padding: var(--s4); border-radius: var(--r-xl);
+  }
+  .side-top { display: flex; flex-direction: column; gap: var(--s3); }
+  .side-top .search { margin-top: var(--s3); }
+  .side-top .block { margin-top: 0; }
+  .side-top .block-head { display: none; } /* "무엇을 먹을까요" 제목: 사이드바에서는 칩만 */
+  .side .food-chips { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; gap: 6px; }
+  .side .food-chip { min-height: 32px; padding: 0 12px; font-size: 13px; }
+  .side .food-chip img { display: none; }
+  .side .sort { align-self: flex-start; }
+  .side-count { font: var(--t-sub); color: var(--label-2); padding-top: var(--s2); border-top: 1px solid var(--separator); }
+  .side-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--fill-2) transparent; margin: 0 calc(var(--s2) * -1); }
+  .side-item {
+    display: flex; align-items: center; gap: var(--s3); padding: var(--s2); border-radius: var(--r-md);
+    color: var(--label); text-decoration: none; transition: background-color .15s;
+  }
+  .side-item:hover { background: var(--fill); }
+  .side-item[aria-current="true"] { background: var(--snow); box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .side-item img { width: 56px; height: 56px; flex: none; border-radius: var(--r-sm); object-fit: cover; }
+  .side-item img.old { padding: 4px; border-radius: 50%; background: var(--plate); object-fit: contain; }
+  .side-item .t { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .side-item .name { font: var(--t-headline); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* 오른쪽: 홈은 "오늘의 추천" 큰 배너 + 사진 그리드 */
+  .home { max-width: 1360px; margin: 0 0 0 calc(var(--side-w) + var(--edge) * 2); padding: var(--s8) var(--gutter) var(--s8) var(--s4); }
+  .home > .block:first-of-type { margin-top: 0; }
+  .tiles { grid-template-columns: repeat(3, minmax(0, 180px)); }
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s6) var(--s4); }
+  .pick { width: min(100%, 880px); min-height: 300px; grid-template-columns: 1fr 46%; gap: var(--s6); padding: var(--s8); }
+  .pick .title { font: var(--t-large); }
+  .pick .line { -webkit-line-clamp: 3; max-width: 34em; font: var(--t-body); }
+  .card > a { transition: box-shadow .15s; }
+  .card > a:hover { box-shadow: 0 18px 36px -20px var(--shadow); }
+
+  /* 오른쪽: 지도는 남은 화면을 채운다. 위 검색 캡슐·아래 사진 띠는 사이드바가 맡는다 */
+  .mapview { min-height: 0; left: calc(var(--side-w) + var(--edge) * 2); top: var(--edge); right: var(--edge); bottom: var(--edge); border-radius: var(--r-xl); overflow: hidden; }
+  .map-top { left: auto; right: var(--s4); justify-content: flex-end; }
+  .map-top .search.capsule, .sheet { display: none; }
+
+  /* 상세: 화면을 바꾸지 않고 오른쪽 위에 뜬 패널(폭 420px) */
+  .detail {
+    position: fixed; z-index: 30; top: var(--edge); right: var(--edge); bottom: var(--edge); width: 420px; min-height: 0;
+    max-width: none; margin: 0; padding: 0; display: flex; flex-direction: column;
+    overflow-y: auto; overscroll-behavior: contain; border-radius: var(--r-xl); box-shadow: 0 30px 80px -30px var(--shadow);
+    scrollbar-width: none; /* 시트가 올라오는 동안 스크롤바가 생겼다 사라지며 폭이 튀지 않게, 처음부터 그리지 않는다(휠 스크롤은 된다) */
+  }
+  .detail::-webkit-scrollbar { display: none; }
+  .detail .back { position: sticky; top: var(--s3); align-self: flex-start; margin: var(--s3) 0 calc(var(--tap) * -1 - var(--s3)) var(--s3); }
+  .hero { height: 250px; min-height: 0; flex: none; }
+  .d-sheet { flex: 1 0 auto; min-height: 0; }
+  .detail .actions { position: sticky; left: auto; right: auto; bottom: 0; width: auto; transform: none; grid-template-columns: 1fr 1fr; border-radius: 0; }
+}
+@media (min-width: 1600px) {
   .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .segmented { max-width: 520px; }
-  .pick { width: 440px; }
-  .tabbar { left: 50%; right: auto; width: 400px; transform: translateX(-50%); bottom: var(--s4); height: var(--tabbar-h); padding: 0; border: 0; border-radius: var(--r-pill); }
-  .sheet { bottom: 0; padding-bottom: calc(var(--tabbar-h) + var(--s6)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -375,3 +439,10 @@ dialog form .btn { width: 100%; }
 /* grid 칸에서는 height % 가 풀리지 않아 원이 잘린다. flex 로 바꿔 칸 높이 기준으로 맞춘다 */
 :is(.ph, .hero):has(> img.old) { background: var(--stone); display: flex; align-items: center; justify-content: center; }
 .pick img.old { width: 100%; height: auto; padding: 7%; border-radius: 50%; background: var(--plate); object-fit: contain; }
+/* PC 추천 배너의 사진(옛 그림 포함): 배너가 너무 높아지지 않게 280px 까지 */
+@media (min-width: 1024px) { .pick img, .pick img.old { width: min(100%, 280px); justify-self: end; } }
+/* 카드 → PC 상세 패널로 날아가는 사진 복사본(motion.detailIn) */
+.fly-ghost { position: fixed; z-index: 60; overflow: hidden; pointer-events: none; box-shadow: 0 20px 50px -20px var(--shadow); }
+.fly-ghost img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.fly-ghost.is-old { display: flex; align-items: center; justify-content: center; background: var(--stone); }
+.fly-ghost.is-old img { width: auto; height: 86%; aspect-ratio: 1; object-fit: contain; padding: 7%; border-radius: 50%; background: var(--plate); }

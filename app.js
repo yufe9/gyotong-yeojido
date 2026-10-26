@@ -21,6 +21,7 @@ const safeUrl = u => (/^https:\/\//.test(u ?? '') ? u : null);
 const icon = name => `<svg class="ic" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 const href = p => `#/p/${encodeURIComponent(p.id)}`;
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const pc = matchMedia('(min-width: 1024px)'); // PC: 왼쪽 사이드바 + 오른쪽 넓은 화면, 상세는 오른쪽 위 패널
 // AI 사진은 960px(<key>.webp)·480px(<key>-480.webp) 두 크기. 아직 AI 사진이 없는 그림은 예전 800px 누끼 한 장이라 회색 원에 넣는다.
 const OLD_IMG = new Set(['cafeteria', 'coffee', 'bread', 'dessert', 'pub', 'cat-cafe']);
 const PHOTO_ALT = { 'gukbap-bone': '뼈해장국', 'bbq-makchang': '막창' }; // 변형 사진의 음식 이름
@@ -85,6 +86,7 @@ function buildHome() {
     </li>`;
   }).join('') + '<li class="empty is-hidden">조건에 맞는 곳이 없어요. 필터를 지워 보세요.</li>';
   cardEls = new Map([...$('grid').querySelectorAll('.card')].map(li => [li.dataset.id, li]));
+  motion.hoverLift($('grid'), '.card > a');
 }
 
 function syncControls() {
@@ -198,6 +200,14 @@ $('picks').addEventListener('scroll', () => {
   [...$('dots').children].forEach((d, j) => d.classList.toggle('on', j === i));
 }, { passive: true });
 
+// PC 에서는 검색·음식 칩·구역·정렬을 사이드바로 옮기고, 좁아지면 제자리로 돌려놓는다.
+// 요소는 하나뿐이라 필터 상태가 두 곳으로 갈라지지 않는다.
+const MOVABLE = [$('home').querySelector('.home-head'), $('foods').closest('.block'), $('zones').closest('.block'), $('sort').closest('.sort')];
+const homeSpots = MOVABLE.map(el => { const mark = document.createComment('홈 자리'); el.before(mark); return mark; });
+function placeControls() {
+  MOVABLE.forEach((el, i) => (pc.matches ? $('side-top').append(el) : homeSpots[i].after(el)));
+}
+
 // ── 상세 ────────────────────────────────────────────────
 const TABS = ['소개', '메뉴', '정보'];
 const row = (label, v) => `<dt>${label}</dt><dd${v ? '' : ' class="unknown"'}>${v ? esc(v) : '확인 필요'}</dd>`;
@@ -269,6 +279,7 @@ function animateDetail() {
   motion.detailIn({
     hero: el.querySelector('.hero'), from: pendingFrom, sheet: el.querySelector('.d-sheet'), title: el.querySelector('h1'),
     parts: [...el.querySelectorAll('.d-title .badge, .d-addr, .pills, .tabs')], bar: el.querySelector('.actions'),
+    panel: pc.matches ? el : null,
   });
   pendingFrom = null;
 }
@@ -276,7 +287,16 @@ function animateDetail() {
 // 앱 안에서 넘어왔으면 뒤로, 주소로 바로 들어왔으면 홈으로
 let inAppNav = 0;
 function goBack() { inAppNav > 0 ? history.back() : (location.hash = '#/'); }
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && current === 'detail') goBack(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && current === 'detail') goBack();
+  // '/' 로 검색창에 가기(글자를 입력하는 중이면 그대로 둔다)
+  if (e.key === '/' && !e.target.closest('input, textarea, select, [contenteditable]')) {
+    e.preventDefault();
+    const q = current === 'map' && !pc.matches ? $('mq') : $('q');
+    if (current === 'detail' && !pc.matches) location.hash = '#/';
+    q.focus();
+  }
+});
 
 // ── 지도 ────────────────────────────────────────────────
 let map = null, clusterer = null, limit = null, kakaoOk = false, sheetCtl = null;
@@ -297,6 +317,7 @@ function loadKakao() {
 
 function fit() {
   if (!map) return;
+  if (pc.matches) return map.setBounds(limit, 24, 24, 24, 24);
   // setBounds(bounds, top, right, bottom, left): 위 검색 캡슐과 아래 시트에 가리지 않게 여백을 준다
   const top = $('mapview').querySelector('.map-top').getBoundingClientRect().bottom + 12;
   const bottom = innerHeight - $('sheet').getBoundingClientRect().top + 12;
@@ -341,7 +362,10 @@ function drawMarkers(items) {
     if (group.length === 1) {
       const p = group[0], src = PIN[p.category];
       const marker = new kakao.maps.Marker({ position: pos, image: pinImage(src), title: p.name });
-      kakao.maps.event.addListener(marker, 'click', () => { select(p.id); revealCard(p.id); });
+      kakao.maps.event.addListener(marker, 'click', () => {
+        if (pc.matches) location.hash = href(p);
+        else { select(p.id); revealCard(p.id); }
+      });
       markers.set(p.id, { marker, src });
       list.push(marker);
     } else {
@@ -373,7 +397,12 @@ function select(id, move = false) {
   cur.marker.setZIndex(10);
   if (move) {
     if (map.getLevel() > 4) map.setLevel(4);
-    map.panTo(cur.marker.getPosition());
+    const pos = cur.marker.getPosition();
+    if (pc.matches && current === 'detail') {
+      // 패널(폭 420 + 여백) 절반만큼 지도 중심을 오른쪽으로 옮겨, 핀이 패널에 가리지 않게 한다
+      const proj = map.getProjection(), pt = proj.containerPointFromCoords(pos);
+      map.panTo(proj.coordsFromContainerPoint(new kakao.maps.Point(pt.x + 218, pt.y)));
+    } else map.panTo(pos);
   }
 }
 
@@ -387,6 +416,20 @@ function renderStrip(items) {
       <div class="name">${esc(p.name)}</div><div class="meta">${metaLine(p)}</div>
     </button></li>`;
   }).join('') : '<li class="empty">조건에 맞는 곳이 없어요.</li>';
+  renderSide();
+}
+
+// PC 사이드바 가게 목록: 지도 아래 사진 띠와 같은 목록(같은 건물 묶음 포함). 사진 썸네일 + 이름 + 별점·거리
+function renderSide() {
+  if (!pc.matches) return;
+  const open = current === 'detail' ? lastDetailId : null;
+  $('side-count').textContent = $('mcount').textContent;
+  $('side-list').innerHTML = stripItems.length ? stripItems.map(p => `
+    <li><a class="side-item c-${p.category}" href="${href(p)}"${p.id === open ? ' aria-current="true"' : ''}>
+      ${placeImg(p, { sizes: '56px' })}
+      <span class="t"><span class="name">${esc(p.name)}</span>
+        <span class="meta"><span class="star">★ ${p.rating.toFixed(1)}</span><span class="sep"></span><span>${distanceText(p.distanceKm)}</span></span></span>
+    </a></li>`).join('') : '<li class="empty">조건에 맞는 곳이 없어요.</li>';
 }
 
 function revealCard(id) {
@@ -415,18 +458,23 @@ function ensureMap(focusId) {
 
 // ── 화면 전환 ───────────────────────────────────────────
 let current = null, homeScroll = 0, lastDetailId = null;
+let base = 'home'; // PC: 상세 패널 뒤에 깔려 있는 화면(홈 또는 지도)
 let pendingFrom = null; // 누른 카드 사진의 화면 위치(카드 → 상세 이어지는 동작용)
 function show(view) {
   if (current === 'home') homeScroll = scrollY;
   const prev = current;
   current = view;
-  document.body.dataset.view = view;
-  $('home').hidden = view !== 'home';
+  if (view !== 'detail') base = view;
+  const panel = pc.matches && view === 'detail';
+  const under = panel ? base : view; // 화면에 깔리는 것
+  document.body.dataset.view = under;
+  document.body.classList.toggle('has-panel', panel);
+  $('home').hidden = under !== 'home';
   $('detail').hidden = view !== 'detail';
-  $('mapview').hidden = view !== 'map';
+  $('mapview').hidden = under !== 'map';
   $('tabbar').hidden = view === 'detail';
-  for (const t of $('tabbar').querySelectorAll('[data-tab]')) {
-    if (t.dataset.tab === view) t.setAttribute('aria-current', 'page');
+  for (const t of document.querySelectorAll('[data-tab]')) {
+    if (t.dataset.tab === under) t.setAttribute('aria-current', 'page');
     else t.removeAttribute('aria-current');
   }
   return prev;
@@ -446,21 +494,27 @@ function route() {
     renderDetail(p);
     lastDetailId = p.id;
     document.title = `${p.name} · 교통여지도`;
-    scrollTo(0, 0);
+    if (pc.matches) $('detail').scrollTop = 0; else scrollTo(0, 0);
     $('detail').querySelector('h1').focus({ preventScroll: true });
     glass.refresh($('detail'));
     animateDetail();
+    if (pc.matches) {
+      renderSide();
+      if (base === 'map' && kakaoOk) { ensureMap(); select(p.id, true); }
+    }
     return;
   }
   if (/^#\/map(\/|$)/.test(location.hash)) {
     const prev = show('map');
     document.title = '지도 · 교통여지도';
     ensureMap(mapFocus());
-    if (prev !== 'map') motion.mapIn($('mapview').querySelector('.map-top'), [...$('strip').children].slice(0, 4));
+    renderSide();
+    if (prev !== 'map' && !(pc.matches && prev === 'detail')) motion.mapIn($('mapview').querySelector('.map-top'), [...$('strip').children].slice(0, 4));
     return;
   }
   const prev = show('home');
   document.title = '교통여지도';
+  if (pc.matches && prev === 'detail') return renderSide(); // 패널만 닫혔다: 홈은 그대로
   requestAnimationFrame(() => scrollTo(0, homeScroll));
   if (prev === 'detail') motion.homeBack($('home'), cardEls.get(lastDetailId));
   else if (prev === 'map') motion.viewIn($('home'));
@@ -471,7 +525,8 @@ document.addEventListener('click', e => {
   const box = e.target.closest('a[href^="#/p/"]')?.querySelector('.ph, img');
   if (!box) return;
   const r = box.getBoundingClientRect();
-  pendingFrom = { left: r.left, top: r.top, width: r.width, height: r.height, radius: 20 };
+  const img = box.tagName === 'IMG' ? box : box.querySelector('img');
+  pendingFrom = { left: r.left, top: r.top, width: r.width, height: r.height, radius: 20, src: img?.currentSrc || img?.src, old: !!img?.classList.contains('old') };
 }, true);
 addEventListener('hashchange', () => { inAppNav++; route(); });
 
@@ -494,9 +549,17 @@ async function start() {
     return;
   }
   buildHome();
+  placeControls();
   update({ animate: false });
   route();
   glass.refresh();
+  pc.addEventListener('change', () => {
+    placeControls();
+    update({ animate: false });
+    route();
+    glass.refresh();
+    if (map) { map.relayout(); fit(); }
+  });
 
   // 첫 화면 등장: 애니메이션 라이브러리가 금방 오면 떠오르게, 늦으면 그냥 보여 준다
   const A = await Promise.race([motion.ready, new Promise(r => setTimeout(() => r(null), 600))]);
