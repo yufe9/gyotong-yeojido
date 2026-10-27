@@ -83,11 +83,12 @@ export function foodType(p) {
 }
 
 // 같은 종류 안에서 다른 사진을 쓰는 가게. 칩은 늘리지 않고 사진만 바꾼다.
+// 비슷한 음식은 다른 종류의 사진을 빌려 쓴다(오징어볶음 → 쭈꾸미).
 // 이름과 첫 메뉴만 본다(뒤쪽 곁들이 메뉴로 대표 사진이 바뀌지 않게).
 const PHOTO_VARIANTS = {
   gukbap: [[/뼈해장국|감자탕/, 'gukbap-bone'], [/부대/, 'gukbap-budae'], [/김치찌개/, 'gukbap-kimchi']],
-  bbq: [[/막창|곱창/, 'bbq-makchang']],
-  rice: [[/쌈밥/, 'rice-ssam']],
+  bbq: [[/막창|곱창/, 'bbq-makchang'], [/쭈꾸미|주꾸미/, 'bbq-jjukkumi']],
+  rice: [[/쌈밥/, 'rice-ssam'], [/오징어볶음/, 'bbq-jjukkumi']],
   burrito: [[/바베큐|바비큐|브리스킷/, 'burrito-bbq']],
   sushi: [[/우동/, 'sushi-udon'], [/스시|초밥|오마카세/, 'sushi-nigiri']], // 둘 다 아니면(심향) 초밥과 우동 사진
 };

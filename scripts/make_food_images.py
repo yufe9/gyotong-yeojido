@@ -50,6 +50,7 @@ PHOTOS = {
     'burrito-bbq': ('바비큐 플래터', '밍거스.png'),
     'sushi-nigiri': ('초밥', '초밥만.png'),
     'sushi-udon': ('우동', '우동.png'),
+    'bbq-jjukkumi': ('쭈꾸미', '쭈꾸미.png'),
 }
 
 # 분류 타일: 4장은 2×2(왼쪽 위부터), 3장은 왼쪽 큰 1장 + 오른쪽 위·아래 2장.

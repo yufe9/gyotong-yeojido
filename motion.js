@@ -117,6 +117,20 @@ export function mapIn(top, items) {
     .add(items, { x: [28, 0], opacity: [0, 1], duration: 360, delay: A.stagger(40) }, '-=260');
 }
 
+// 사진 크게 보기: 검은 창이 번지고, 사진은 누른 자리에서 화면 가득 커진다
+export function zoomIn(slide, from) {
+  if (!on() || !slide) return;
+  A.animate(slide.closest('dialog'), { opacity: [0, 1], duration: 220, ease: 'out(2)' });
+  const r = from?.getBoundingClientRect(), v = slide.getBoundingClientRect();
+  if (!r?.width) return A.animate(slide, { scale: [0.92, 1], duration: 380, ease: 'out(4)' });
+  const s = Math.min(r.width / v.width, r.height / v.height);
+  A.animate(slide, {
+    x: [r.left + r.width / 2 - (v.left + v.width / 2), 0],
+    y: [r.top + r.height / 2 - (v.top + v.height / 2), 0],
+    scale: [s, 1], duration: 420, ease: 'out(4)',
+  });
+}
+
 // 버튼·탭 누름: 1 → 0.96 → 1
 export function press(el) {
   if (!on() || !el) return;

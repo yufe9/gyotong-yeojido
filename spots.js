@@ -2,6 +2,7 @@
 // 승인된 명소만 보이고, 제보는 "대기"로 들어가 운영자가 admin.html 에서 승인해야 지도에 뜬다.
 import { SPOT_KINDS, REPORT_LIMITS, validateReport } from './logic.js';
 import * as supa from './supa.js';
+import * as motion from './motion.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -59,10 +60,10 @@ export function detailHtml(s, icon) {
   return `
     <button class="back glass glass-map" type="button" aria-label="뒤로">${icon('back')}</button>
     <div class="hero${photos.length > 1 ? ' gallery' : ''}">${photos.length
-      ? photos.map((p, i) => `<img src="${esc(supa.photoUrl(p))}" alt="${esc(s.name)}${photos.length > 1 ? ` 사진 ${i + 1}` : ''}" decoding="async">`).join('')
+      ? photos.map((p, i) => `<img src="${esc(supa.photoUrl(p))}" alt="${esc(s.name)}${photos.length > 1 ? ` 사진 ${i + 1}` : ''}" decoding="async" data-zoom="${i}" tabindex="0" role="button" aria-description="누르면 크게 보기">`).join('')
       : '<img src="img/pin-spot.svg" alt="">'}</div>
     <div class="d-sheet glass" data-refract>
-      ${photos.length > 1 ? `<p class="ai-note">옆으로 넘기면 사진 ${photos.length}장</p>` : ''}
+      ${photos.length ? `<p class="ai-note">${photos.length > 1 ? `옆으로 넘기면 사진 ${photos.length}장 · ` : ''}사진을 누르면 크게 볼 수 있어요</p>` : ''}
       <div class="d-title"><h1 tabindex="-1">${esc(s.name)}</h1><span class="badge spot-badge">명소</span></div>
       <p class="d-addr">${esc(kindLabel(s.kind))}</p>
       <div class="pills">
@@ -79,6 +80,46 @@ export function detailHtml(s, icon) {
       <a class="btn primary" href="#/spots/${encodeURIComponent(s.id)}">${icon('pin')}지도에서 보기</a>
       <a class="btn secondary" href="${esc(kakaoLink)}" target="_blank" rel="noopener">${icon('out')}카카오맵에서 보기</a>
     </div>`;
+}
+
+// ── 사진 크게 보기 ──────────────────────────────────────
+// 올린 사진(긴 변 1600px)을 화면 가득 보여 준다. 사진을 누르면 실제 크기로 바뀌고, 누른 곳이 가운데 온다.
+export function openViewer(s, i, from) {
+  const dlg = $('viewer'), track = $('viewer-track');
+  track.innerHTML = s.photos.map((p, k) => `
+    <div class="viewer-slide"><img src="${esc(supa.photoUrl(p))}" alt="${esc(s.name)} 사진 ${k + 1}" decoding="async"></div>`).join('');
+  track.classList.remove('locked');
+  dlg.showModal();
+  track.scrollLeft = i * track.clientWidth;
+  viewerCount();
+  motion.zoomIn(track.children[i], from);
+}
+
+const viewerIndex = () => Math.round($('viewer-track').scrollLeft / ($('viewer-track').clientWidth || 1));
+function viewerCount() {
+  const imgs = $('viewer-track').querySelectorAll('img'), i = viewerIndex();
+  $('viewer-count').textContent = imgs.length > 1 ? `${i + 1} / ${imgs.length}` : '';
+  $('viewer-count').hidden = imgs.length < 2;
+  $('viewer-orig').href = imgs[i]?.src ?? '';
+}
+
+function initViewer() {
+  const dlg = $('viewer'), track = $('viewer-track');
+  track.addEventListener('scroll', viewerCount, { passive: true });
+  track.addEventListener('click', e => {
+    const img = e.target.closest('img');
+    if (!img) return dlg.close(); // 사진 밖 검은 곳을 누르면 닫힌다
+    const slide = img.parentElement, r = img.getBoundingClientRect();
+    const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+    const actual = slide.classList.toggle('actual');
+    track.classList.toggle('locked', actual); // 실제 크기일 때는 옆 사진으로 넘어가지 않고 사진 안에서 움직인다
+    if (actual) {
+      slide.scrollLeft = fx * img.naturalWidth - slide.clientWidth / 2;
+      slide.scrollTop = fy * img.naturalHeight - slide.clientHeight / 2;
+    }
+  });
+  $('viewer-close').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('close', () => { track.innerHTML = ''; });
 }
 
 // ── 제보 창 ─────────────────────────────────────────────
@@ -103,6 +144,7 @@ let draft = null; // { lat, lng, blobs: [], admin }
 let ctx = null;   // init 에서 받는 것: { box, onSaved(), draftPin(lat|null, lng) }
 
 export function init(c) {
+  initViewer();
   ctx = c;
   const form = $('report-form');
   $('report-kinds').insertAdjacentHTML('beforeend', Object.entries(SPOT_KINDS).map(([k, v]) => `

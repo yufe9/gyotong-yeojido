@@ -25,7 +25,7 @@ const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matche
 const pc = matchMedia('(min-width: 1024px)'); // PC: 왼쪽 사이드바 + 오른쪽 넓은 화면, 상세는 오른쪽 위 패널
 // 음식 사진은 모두 AI 사진: 960px(<key>.webp)·480px(<key>-480.webp) 두 크기를 srcset 으로 고른다
 const PHOTO_ALT = { // 변형 사진의 음식 이름(logic.js 의 PHOTO_VARIANTS)
-  'gukbap-bone': '뼈해장국', 'gukbap-budae': '부대찌개', 'gukbap-kimchi': '김치찌개', 'bbq-makchang': '막창',
+  'gukbap-bone': '뼈해장국', 'gukbap-budae': '부대찌개', 'gukbap-kimchi': '김치찌개', 'bbq-makchang': '막창', 'bbq-jjukkumi': '쭈꾸미',
   'rice-ssam': '우렁쌈밥', 'burrito-bbq': '바비큐 플래터', 'sushi-nigiri': '초밥', 'sushi-udon': '우동',
 };
 const foodImg = (key, alt, { lazy = true, sizes = '50vw' } = {}) =>
@@ -288,7 +288,7 @@ function animateDetail() {
 let inAppNav = 0;
 function goBack() { inAppNav > 0 ? history.back() : (location.hash = '#/'); }
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && current === 'detail') goBack();
+  if (e.key === 'Escape' && current === 'detail' && !document.querySelector('dialog[open]')) goBack();
   // '/' 로 검색창에 가기(글자를 입력하는 중이면 그대로 둔다)
   if (e.key === '/' && !e.target.closest('input, textarea, select, [contenteditable]')) {
     e.preventDefault();
@@ -475,6 +475,10 @@ function renderSpotDetail(sp) {
   el.className = 'view detail spot';
   el.innerHTML = spotsUI.detailHtml(sp, icon);
   el.querySelector('.back').addEventListener('click', goBack);
+  const hero = el.querySelector('.hero');
+  const zoom = e => { const img = e.target.closest('[data-zoom]'); if (img) spotsUI.openViewer(sp, +img.dataset.zoom, img); };
+  hero.addEventListener('click', zoom);
+  hero.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); zoom(e); } });
 }
 
 function renderStrip(items) {

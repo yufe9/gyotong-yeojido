@@ -179,6 +179,16 @@
     </div>
   </dialog>
 
+  <!-- 명소 사진 크게 보기: 옆으로 넘기고, 사진을 누르면 화면 맞춤 ↔ 실제 크기 -->
+  <dialog id="viewer" class="viewer" aria-label="사진 크게 보기">
+    <div id="viewer-track" class="viewer-track"></div>
+    <div class="viewer-bar">
+      <span id="viewer-count" class="viewer-count"></span>
+      <a id="viewer-orig" class="viewer-btn" target="_blank" rel="noopener">원본 열기</a>
+      <button type="button" id="viewer-close" class="viewer-btn viewer-x" aria-label="닫기">×</button>
+    </div>
+  </dialog>
+
   <script type="module" src="app.js"></script>
 </body>
 </html>

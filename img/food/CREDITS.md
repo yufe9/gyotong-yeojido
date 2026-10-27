@@ -34,5 +34,6 @@
 | `burrito-bbq.webp` | 바비큐 플래터 | Gemini로 생성(원유철) |
 | `sushi-nigiri.webp` | 초밥 | Gemini로 생성(원유철) |
 | `sushi-udon.webp` | 우동 | Gemini로 생성(원유철) |
+| `bbq-jjukkumi.webp` | 쭈꾸미 | Gemini로 생성(원유철) |
 | `cat-food.webp` | 음식점 (짬뽕 · 삼겹살 · 돈가스 · 햄버거 2×2) | Gemini로 생성(원유철) |
 | `cat-cafe.webp` | 카페 (커피 · 빵 · 푸딩·빙수·와플 2×2) | Gemini로 생성(원유철) |

@@ -514,3 +514,22 @@ dialog form .btn { width: 100%; }
 @media (max-width: 640px) { .admin-item { grid-template-columns: 1fr; } .admin-photos { grid-template-columns: repeat(3, 1fr); } }
 /* 명소 모드의 지도: 사이드바에 맛집용 칩·구역·정렬은 필요 없다 */
 body[data-layer="spots"][data-view="map"] .side-top > :not(.home-head) { display: none; }
+/* ── 명소 사진 크게 보기 ── */
+.hero [data-zoom] { cursor: zoom-in; }
+.hero [data-zoom]:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+dialog.viewer { inset: 0; width: auto; height: auto; max-width: none; max-height: none; margin: 0; padding: 0; border-radius: 0; background: #0b0f12; box-shadow: none; overflow: hidden; }
+dialog.viewer::backdrop { background: transparent; }
+html:has(dialog.viewer[open]) { overflow: hidden; } /* 보는 동안 뒤 페이지 스크롤바를 감춘다 */
+.viewer-track { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior: contain; }
+.viewer-track::-webkit-scrollbar { display: none; }
+.viewer-track.locked { overflow: hidden; }
+.viewer-slide { flex: 0 0 100%; height: 100%; scroll-snap-align: start; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.viewer-slide img { max-width: 100%; max-height: 100%; object-fit: contain; cursor: zoom-in; }
+.viewer-slide.actual { display: block; overflow: auto; scrollbar-width: none; }
+.viewer-slide.actual::-webkit-scrollbar { display: none; }
+.viewer-slide.actual img { max-width: none; max-height: none; cursor: zoom-out; }
+.viewer-bar { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 16px; right: 16px; display: flex; align-items: center; gap: var(--s2); }
+.viewer-count { padding: 6px 12px; border-radius: 999px; background: rgba(0, 0, 0, .55); color: #fff; font: var(--t-sub); }
+#viewer-orig { margin-left: auto; }
+.viewer-btn { min-width: 44px; min-height: 44px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 999px; background: rgba(0, 0, 0, .55); color: #fff; font: var(--t-sub); text-decoration: none; cursor: pointer; }
+.viewer-x { padding: 0; font-size: 26px; line-height: 1; }

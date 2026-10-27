@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { visible, spots, limitBox, clamp, distanceText, SORTS, FOOD_TYPES, foodType, foodPhoto, search, topPicks, countBy,
   SPOT_KINDS, REPORT_LIMITS, inBox, validateReport, byStatus } from './logic.js';
 
@@ -80,6 +80,7 @@ test('사진은 같은 종류 안에서 이름과 첫 메뉴로 변형을 고른
   assert.equal(photo('일번지순대국'), 'gukbap');
   assert.equal(photo('큰집막창'), 'bbq-makchang');
   assert.equal(photo('엄정분식'), 'bbq-makchang', '첫 메뉴가 막창구이');
+  assert.equal(photo('이씨식당'), 'bbq-jjukkumi', '직화쭈꾸미');
   assert.equal(photo('제주돼지촌'), 'bbq', '첫 메뉴가 삼겹살이면 뒤에 막창이 있어도 기본 사진');
   assert.equal(photo('제갈덮밥'), 'rice', '덮밥 가게의 곱창은 변형 대상이 아니다');
   assert.equal(photo('리밍'), 'jjamppong');
@@ -94,8 +95,9 @@ test('사진은 같은 종류 안에서 이름과 첫 메뉴로 변형을 고른
   assert.equal(photo('막부'), 'sushi-nigiri', '첫 메뉴가 스시 오마카세');
   assert.equal(photo('우동키노야'), 'sushi-udon');
   assert.equal(photo('심향'), 'sushi', '야끼소바·오무라이스는 기본(초밥과 우동) 사진');
-  assert.equal(photo('만선식당'), 'rice', '맞는 사진이 없으면 기본 사진');
-  for (const p of places) assert.ok(foodPhoto(p).startsWith(foodType(p)), p.name);
+  assert.equal(photo('만선식당'), 'bbq-jjukkumi', '오징어볶음은 쭈꾸미 사진으로 대신한다');
+  assert.equal(photo('성대분식'), 'rice', '첫 메뉴가 아닌 오징어덮밥은 기본 사진');
+  for (const p of places) assert.ok(existsSync(new URL(`./img/food/${foodPhoto(p)}.webp`, import.meta.url)), p.name);
 });
 
 test('검색은 이름·메뉴를 띄어쓰기·대소문자 없이 찾는다', () => {
