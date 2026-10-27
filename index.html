@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#d3e5ef">
-  <meta name="description" content="교통대생이 추천한 충주 맛집 95곳">
+  <meta name="description" content="교통대생이 추천한 충주 맛집 94곳">
   <title>교통여지도</title>
   <link rel="icon" href="img/pin-food.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/Pretendard-Bold.subset.woff2" as="font" type="font/woff2" crossorigin>
@@ -24,6 +24,7 @@
     <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 19c.5-3 2.7-4.5 5.5-4.5s5 1.5 5.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16.5" cy="9" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 14.6c2.4 0 4 1.3 4.5 3.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
     <symbol id="i-out" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="10" r="2.3" fill="currentColor"/></symbol>
+    <symbol id="i-spot-add" viewBox="0 0 24 24"><path d="m10 3.5 2 4.1 4.5.7-3.3 3.2.8 4.5-4-2.1-4 2.1.8-4.5-3.3-3.2 4.5-.7z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M18.5 14.5v6m-3-3h6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
     <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   </svg>
 
@@ -35,7 +36,7 @@
     <nav class="segmented side-seg" aria-label="화면">
       <a href="#/" data-tab="home">홈</a>
       <a href="#/map" data-tab="map">지도</a>
-      <button type="button" disabled title="4단계에서 열려요">명소 <small>준비 중</small></button>
+      <a href="#/spots" data-tab="spots">명소</a>
     </nav>
     <div id="side-top" class="side-top"></div>
     <p id="side-count" class="side-count"></p>
@@ -46,7 +47,7 @@
   <main id="home" class="view home" aria-labelledby="home-title">
     <header class="home-head">
       <h1 id="home-title" class="large-title">교통여지도</h1>
-      <p class="lede">교통대생이 추천한 충주 맛집 95곳</p>
+      <p class="lede">교통대생이 추천한 충주 맛집 94곳</p>
       <label class="search glass" data-refract>
         <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
         <input id="q" type="search" placeholder="가게 이름이나 메뉴로 찾기" autocomplete="off" enterkeyhint="search" aria-label="가게 이름이나 메뉴로 찾기">
@@ -104,7 +105,14 @@
         <button class="clear" type="button" aria-label="검색어 지우기" hidden><svg class="ic" aria-hidden="true"><use href="#i-clear"/></svg></button>
       </label>
       <button id="fit" class="round-btn glass glass-map" type="button" aria-label="전체 보기"><svg class="ic" aria-hidden="true"><use href="#i-fit"/></svg></button>
+      <div id="layers" class="segmented glass glass-map layers" role="radiogroup" aria-label="지도에 보일 것">
+        <button type="button" role="radio" data-layer="food" aria-checked="true">맛집</button>
+        <button type="button" role="radio" data-layer="spots" aria-checked="false">명소</button>
+        <button type="button" role="radio" data-layer="both" aria-checked="false">함께</button>
+      </div>
+      <button id="report-btn" class="round-btn glass glass-map report-btn" type="button" aria-label="명소 제보하기"><svg class="ic" aria-hidden="true"><use href="#i-spot-add"/></svg><span>제보</span></button>
     </div>
+    <p id="pick-hint" class="pick-hint glass glass-map" role="status" hidden>제보할 곳을 지도에서 눌러 주세요 <button type="button" id="pick-cancel" class="text-btn">취소</button></p>
     <section id="sheet" class="sheet glass glass-map" aria-label="가게 사진 목록">
       <div id="grabber" class="grabber" role="button" tabindex="0" aria-label="목록 올리기·내리기"><span></span></div>
       <div class="sheet-head">
@@ -132,8 +140,43 @@
       <li id="help-date"></li>
     </ul>
     <p>영업시간·가격은 바뀔 수 있으니 가기 전에 "네이버에서 보기"로 확인하세요.</p>
-    <p class="credit">음식 사진은 가게 사진이 아니라 메뉴 종류를 보여 주는 예시로, Gemini로 생성(원유철)한 AI 이미지입니다. 실제 메뉴와 다를 수 있습니다. 학식·카페·주점 그림은 CC0·CC BY 사진을 합성했습니다: <a href="img/food/CREDITS.md" target="_blank" rel="noopener">사진 출처</a></p>
+    <p class="credit">음식 사진은 가게 사진이 아니라 메뉴 종류를 보여 주는 예시로, Gemini로 생성(원유철)한 AI 이미지입니다. 실제 메뉴와 다를 수 있습니다: <a href="img/food/CREDITS.md" target="_blank" rel="noopener">사진 출처</a></p>
     <form method="dialog"><button class="btn primary">닫기</button></form>
+  </dialog>
+
+  <!-- 명소 제보 창. 사진은 브라우저에서 줄이고 촬영 위치 정보(EXIF)를 지운 뒤 올린다 -->
+  <dialog id="report" class="glass glass-map report" aria-labelledby="report-title">
+    <form id="report-form" novalidate>
+      <h2 id="report-title">교통대 명소 제보</h2>
+      <p id="report-where" class="report-where"></p>
+      <p id="report-admin" class="report-admin" hidden>운영자로 로그인돼 있어요. 저장하면 바로 공개됩니다.</p>
+      <label class="field"><span>이름</span><input name="name" maxlength="40" autocomplete="off" placeholder="예: 탄금대 노을 언덕"></label>
+      <fieldset id="report-kinds" class="field kinds"><legend>종류</legend></fieldset>
+      <label class="field"><span>한 줄 소개</span><input name="summary" maxlength="60" autocomplete="off" placeholder="예: 해 질 녘 남한강이 붉게 물드는 곳"></label>
+      <label class="field"><span>여기가 좋은 이유 <small id="body-count">0/500</small></span><textarea name="body" rows="5" maxlength="500" placeholder="20자 이상으로 적어 주세요"></textarea></label>
+      <label class="field"><span>추천 시간대·계절 <small>(선택)</small></span><input name="bestTime" maxlength="40" autocomplete="off" placeholder="예: 가을 저녁 6시"></label>
+      <label class="field"><span>닉네임 <small>(선택)</small></span><input name="nickname" maxlength="20" autocomplete="off"></label>
+      <div class="field" role="group" aria-labelledby="photos-label">
+        <span id="photos-label">사진 1~3장</span>
+        <div id="report-photos" class="report-photos"></div>
+        <label id="report-add" class="btn secondary add-photo"><input id="report-file" type="file" accept="image/*" multiple class="visually-hidden">사진 고르기</label>
+      </div>
+      <label class="hp" aria-hidden="true">웹사이트<input name="website" tabindex="-1" autocomplete="off"></label>
+      <ul class="report-notice">
+        <li>다른 사람 얼굴이 크게 나온 사진은 올리지 마세요.</li>
+        <li>사진의 촬영 위치 정보(EXIF)는 지우고 올립니다.</li>
+        <li>승인 후 공개됩니다. 이메일·전화번호는 적지 마세요.</li>
+      </ul>
+      <p id="report-error" class="report-error" role="alert"></p>
+      <div class="report-actions">
+        <button type="button" id="report-cancel" class="btn secondary">취소</button>
+        <button type="submit" id="report-submit" class="btn primary">제보 보내기</button>
+      </div>
+    </form>
+    <div id="report-done" class="report-done" hidden>
+      <p id="report-done-text"></p>
+      <button type="button" id="report-close" class="btn primary">닫기</button>
+    </div>
   </dialog>
 
   <script type="module" src="app.js"></script>

@@ -17,7 +17,7 @@ CACHE = os.path.join(ROOT, 'scripts', '.cache', 'fonts')
 VERSION = '1.3.9'
 WEIGHTS = ['Regular', 'SemiBold', 'Bold']
 SRC = 'https://cdn.jsdelivr.net/npm/pretendard@{v}/dist/web/static/woff2/Pretendard-{w}.woff2'
-TEXT_FILES = ['index.html', 'app.js', 'logic.js', 'motion.js']
+TEXT_FILES = ['index.html', 'app.js', 'logic.js', 'motion.js', 'spots.js', 'admin.html', 'admin.js', 'supa.js']
 
 
 def strings(v):
@@ -36,7 +36,9 @@ def used_chars():
     no_comments = lambda s: re.sub(r'<!--.*?-->|/\*.*?\*/|(?<![:\'"])//[^\n]*', '', s, flags=re.S)
     text = ''.join(no_comments(open(os.path.join(ROOT, f), encoding='utf-8').read()) for f in TEXT_FILES)
     text += ''.join(strings(json.load(open(os.path.join(ROOT, 'data', 'places.json'), encoding='utf-8'))))
-    return {c for c in text if c.isprintable() and not c.isspace()}
+    # 이모지(명소 종류 아이콘 등)는 Pretendard 에 없고 기기의 이모지 글꼴이 그리므로 뺀다
+    emoji = lambda c: ord(c) >= 0x1F000 or 0x2600 <= ord(c) <= 0x27BF or c == "️"
+    return {c for c in text if c.isprintable() and not c.isspace() and not emoji(c)}
 
 
 def ksx1001_hangul():

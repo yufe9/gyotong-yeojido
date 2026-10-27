@@ -9,7 +9,7 @@
     python scripts/make_food_images.py <원본 폴더> --board 비교판.jpg
 
 출력: img/food/<key>.webp(960px, 상세 화면) + img/food/<key>-480.webp(카드·칩).
-사진을 추가하려면 PHOTOS 에 한 줄 넣고, 그 key 를 app.js 의 OLD_IMG 와 아래 OLD 에서 지운다.
+사진을 추가하려면 PHOTOS 에 한 줄 넣는다. 변형 사진이면 logic.js 의 PHOTO_VARIANTS 와 app.js 의 PHOTO_ALT 에도 넣는다.
 """
 import os, sys
 from PIL import Image, ImageDraw, ImageFont
@@ -38,32 +38,26 @@ PHOTOS = {
     'pasta': ('파스타', '파스타.png'),
     'burrito': ('부리또', '부리또.png'),
     'salad': ('샌드위치 샐러드', '샌드위치 샐러드.png'),
+    'cafeteria': ('학식', '학식.png'),
+    'coffee': ('커피', '커피.png'),
+    'bread': ('빵', '빵.png'),
+    'dessert': ('푸딩·빙수·와플', '푸딩디저트.png'),
+    'pub': ('안주', '안주.png'),
+    # 같은 종류 안의 변형 사진(logic.js 의 PHOTO_VARIANTS 가 고른다)
+    'gukbap-budae': ('부대찌개', '부대찌개.png'),
+    'gukbap-kimchi': ('김치찌개', '김치찌개.png'),
+    'rice-ssam': ('우렁쌈밥', '우렁쌈밥.png'),
+    'burrito-bbq': ('바비큐 플래터', '밍거스.png'),
+    'sushi-nigiri': ('초밥', '초밥만.png'),
+    'sushi-udon': ('우동', '우동.png'),
 }
 
-# 분류 타일: 위 사진 4장을 2×2로 합친다(왼쪽 위부터).
+# 분류 타일: 4장은 2×2(왼쪽 위부터), 3장은 왼쪽 큰 1장 + 오른쪽 위·아래 2장.
+# 주점 타일은 pub(안주) 사진을 그대로 쓴다(app.js 의 CAT_IMG).
 TILES = {
     'cat-food': ('음식점', ['jjamppong', 'bbq', 'donkatsu', 'burger']),
+    'cat-cafe': ('카페', ['coffee', 'bread', 'dessert']),
 }
-
-# 아직 AI 사진이 없어 예전 누끼 합성(800px 한 장)을 그대로 쓰는 그림의 출처.
-# 새 사진으로 바뀌면 그 줄을 지운다. 만드는 코드는 git 기록(커밋 3dab61d)에 있다.
-OLD = [
-    ('cafeteria', '학식', 'School lunch tray (20221028-FNS-RC-0008)', 'https://www.flickr.com/photos/41284017@N08/52474644565', 'USDA', 'Public domain mark'),
-    ('coffee', '커피', 'Cup of coffee with beans.jpg', 'https://commons.wikimedia.org/wiki/File:Cup_of_coffee_with_beans.jpg', 'Petr Kratochvil', 'CC0'),
-    ('coffee', '커피', 'latte art', 'https://www.flickr.com/photos/51018933@N08/5355832765', 'renee_mcgurk', 'CC BY 2.0'),
-    ('bread', '빵', 'Croissant-Petr Kratochvil.jpg', 'https://commons.wikimedia.org/wiki/File:Croissant-Petr_Kratochvil.jpg', 'Petr Kratochvil', 'CC0'),
-    ('bread', '빵', 'Handmade baguette', 'https://www.flickr.com/photos/15216811@N06/14158739752', 'Nicola since 1972', 'CC BY 2.0'),
-    ('dessert', '디저트', 'Putchin Pudding 001.jpg', 'https://commons.wikimedia.org/wiki/File:Putchin_Pudding_001.jpg', 'Ocdp', 'CC0'),
-    ('dessert', '디저트', 'Waffles with maple syrup and butter on a white plate.jpg', 'https://commons.wikimedia.org/wiki/File:Waffles_with_maple_syrup_and_butter_on_a_white_plate.jpg', 'TheCulinaryGeek', 'CC BY 2.0'),
-    ('dessert', '디저트', 'Mango Bingsu', 'https://www.flickr.com/photos/87537074@N03/32007037132', 'promoterest', 'Public domain mark'),
-    ('cat-cafe', '카페', 'Cup of coffee with beans.jpg', 'https://commons.wikimedia.org/wiki/File:Cup_of_coffee_with_beans.jpg', 'Petr Kratochvil', 'CC0'),
-    ('cat-cafe', '카페', 'Putchin Pudding 001.jpg', 'https://commons.wikimedia.org/wiki/File:Putchin_Pudding_001.jpg', 'Ocdp', 'CC0'),
-    ('cat-cafe', '카페', 'Croissant-Petr Kratochvil.jpg', 'https://commons.wikimedia.org/wiki/File:Croissant-Petr_Kratochvil.jpg', 'Petr Kratochvil', 'CC0'),
-    ('pub', '주점', 'Golbaengi-muchim 1.jpg', 'https://commons.wikimedia.org/wiki/File:Golbaengi-muchim_1.jpg', 'lazy fri13th', 'CC BY 2.0'),
-    ('pub', '주점', 'Three Beer Glasses', 'https://www.flickr.com/photos/49889671@N03/14814702098', 'Didriks', 'CC BY 2.0'),
-    ('pub', '주점', 'Korean Fried Chicken (Closeup)', 'https://www.flickr.com/photos/87117631@N00/8729194308', 'Gary Soup', 'CC BY 2.0'),
-]
-
 
 def save_webp(im, path, max_bytes):
     for q in (78, 74, 70, 64, 58, 52):
@@ -92,6 +86,13 @@ def load(src, key):
 def tile(src, keys):
     half = 1024
     sheet = Image.new('RGB', (half * 2, half * 2))
+    if len(keys) == 3:
+        # 왼쪽: 첫 사진의 가운데 세로 띠(1:2), 오른쪽: 나머지 두 장
+        big = load(src, keys[0]).resize((half * 2, half * 2), Image.LANCZOS)
+        sheet.paste(big.crop((half // 2, 0, half // 2 + half, half * 2)), (0, 0))
+        for i, key in enumerate(keys[1:]):
+            sheet.paste(load(src, key).resize((half, half), Image.LANCZOS), (half, i * half))
+        return sheet
     for i, key in enumerate(keys):
         sheet.paste(load(src, key).resize((half, half), Image.LANCZOS), ((i % 2) * half, (i // 2) * half))
     return sheet
@@ -104,10 +105,6 @@ def write_credits():
              '| 이미지 | 음식 | 출처 |', '|---|---|---|']
     lines += [f'| `{k}.webp` | {label} | {CREDIT} |' for k, (label, _) in PHOTOS.items()]
     lines += [f"| `{k}.webp` | {label} ({' · '.join(PHOTOS[x][0] for x in keys)} 2×2) | {CREDIT} |" for k, (label, keys) in TILES.items()]
-    lines += ['', '## 아직 바꾸지 않은 그림', '',
-              '무료 사진(CC0·퍼블릭 도메인·CC BY)의 배경을 지워 합성했다. 모두 상업적 이용·수정이 허용된다.', '',
-              '| 이미지 | 원본 | 작가 | 라이선스 |', '|---|---|---|---|']
-    lines += [f'| `{k}.webp` {label} | [{title}]({page}) | {author} | {lic} |' for k, label, title, page, author, lic in OLD]
     open(os.path.join(OUT, 'CREDITS.md'), 'w', encoding='utf-8').write('\n'.join(lines) + '\n')
 
 

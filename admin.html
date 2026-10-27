@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#d3e5ef">
+  <meta name="robots" content="noindex">
+  <title>운영자 · 교통여지도</title>
+  <link rel="icon" href="img/pin-spot.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="admin-page">
+  <div class="sky" aria-hidden="true"><span class="blob"></span><span class="blob"></span></div>
+
+  <main class="admin">
+    <header class="admin-head">
+      <div>
+        <h1 class="large-title">명소 제보 승인</h1>
+        <p id="who" class="lede">교통여지도 운영자 화면</p>
+      </div>
+      <button id="logout" type="button" class="btn secondary" hidden>로그아웃</button>
+    </header>
+
+    <!-- 1) 로그인: 메일로 받은 링크를 누르면 이 화면으로 돌아온다 -->
+    <section id="login" class="glass admin-card" hidden>
+      <form id="login-form">
+        <label class="field"><span>운영자 이메일</span><input id="email" type="email" required autocomplete="email" placeholder="you@example.com"></label>
+        <button type="submit" class="btn primary">로그인 링크 받기</button>
+      </form>
+      <p id="login-msg" class="admin-msg" role="status"></p>
+    </section>
+
+    <!-- 2) 로그인은 했지만 운영자 명단(admins 표)에 없는 계정 -->
+    <section id="denied" class="glass admin-card" hidden>
+      <p>이 계정은 운영자 명단에 없어요. Supabase SQL Editor 에서 <code>admins</code> 표에 이메일을 넣은 뒤 다시 열어 주세요(README 참고).</p>
+    </section>
+
+    <!-- 3) 승인 화면 -->
+    <section id="board" hidden>
+      <div id="status-tabs" class="segmented glass" role="tablist" aria-label="상태">
+        <button type="button" role="tab" data-status="pending" aria-selected="true">대기 <span class="n"></span></button>
+        <button type="button" role="tab" data-status="approved" aria-selected="false">승인됨 <span class="n"></span></button>
+        <button type="button" role="tab" data-status="rejected" aria-selected="false">거절됨 <span class="n"></span></button>
+      </div>
+      <p id="board-msg" class="admin-msg" role="status"></p>
+      <ul id="items" class="admin-list"></ul>
+      <p class="admin-foot">운영자가 직접 등록하려면: 로그인한 채로 <a href="./#/spots">앱의 지도</a>를 길게 누르거나(PC는 오른쪽 클릭) [제보] 버튼 → 저장하면 바로 공개됩니다.</p>
+    </section>
+  </main>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

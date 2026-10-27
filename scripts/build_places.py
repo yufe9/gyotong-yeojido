@@ -23,6 +23,8 @@ OVERRIDES = ROOT / "data" / "coord_overrides.csv"
 SCHOOL_ADDR = "충북 충주시 대소원면 대학로 50"
 EMPTY = {"확인 필요", "확인 안 됨", "", None}
 CATEGORY_CODE = {"음식점": "FD6", "카페": "CE7"}
+# 문을 닫은 가게: 엑셀에 남아 있어도 places.json 에 넣지 않는다
+CLOSED = {"사천마라탕교통대점"}  # 2026-10-26 폐업 확인
 # 충주시 전체를 넉넉히 덮는 사각형. 이 밖의 좌표는 오변환으로 본다.
 CHUNGJU = (36.80, 37.25, 127.65, 128.20)
 
@@ -79,7 +81,7 @@ def main(xlsx):
     ws = openpyxl.load_workbook(xlsx, read_only=True)["맛집카페"]
     rows = list(ws.iter_rows(values_only=True))
     head = rows[0]
-    rows = [dict(zip(head, r)) for r in rows[1:] if r[0]]
+    rows = [dict(zip(head, r)) for r in rows[1:] if r[0] and r[0] not in CLOSED]
 
     cache = {}
     if OUT.exists():

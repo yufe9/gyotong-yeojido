@@ -67,7 +67,7 @@ export function detailIn({ hero, from, sheet, title, parts, bar, panel }) {
     // PC 패널은 스크롤 상자라 밖으로 나간 사진이 잘려 보이지 않는다. 그래서 진짜 사진은 숨기고,
     // 맨 위층에 띄운 복사본이 클릭한 자리에서 패널 사진 자리까지 날아간 뒤 진짜와 바뀐다.
     const ghost = document.createElement('div');
-    ghost.className = `fly-ghost${from.old ? ' is-old' : ''}`;
+    ghost.className = 'fly-ghost';
     Object.assign(ghost.style, { left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px`, borderRadius: `${from.radius}px` });
     const img = new Image();
     img.src = from.src; img.alt = '';

@@ -1,6 +1,7 @@
 import { ZONES, CATEGORIES, FOOD_TYPES, visible, spots, limitBox, clamp, distanceText, foodType, foodPhoto, topPicks, countBy } from './logic.js';
 import * as motion from './motion.js';
 import * as glass from './glass.js';
+import * as spotsUI from './spots.js';
 
 // JavaScript 키는 브라우저에 공개된다. 카카오 콘솔의 JavaScript SDK 도메인 제한으로 보호한다.
 const KAKAO_JS_KEY = 'fcc7025814ea14defac67db2babb5c5a';
@@ -9,7 +10,7 @@ const PIN = { 음식점: 'img/pin-food.svg', 카페: 'img/pin-cafe.svg', 주점:
 const SHORT = { '충주 교외 맛집': '교외', '충주 시내': '시내' };
 const CAT_IMG = { 음식점: 'cat-food', 카페: 'cat-cafe', 주점: 'pub' }; // 분류 타일 합성 이미지
 
-const state = { zone: '전체', category: null, food: null, query: '', sort: 'rating', spot: null };
+const state = { zone: '전체', category: null, food: null, query: '', sort: 'rating', spot: null, layer: 'food' }; // layer: 지도에 맛집(food)·명소(spots)·함께(both)
 const filters = () => ({
   zone: state.zone, sort: state.sort, food: state.food, query: state.query,
   categories: new Set(state.category ? [state.category] : CATEGORIES),
@@ -22,15 +23,13 @@ const icon = name => `<svg class="ic" aria-hidden="true"><use href="#i-${name}"/
 const href = p => `#/p/${encodeURIComponent(p.id)}`;
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const pc = matchMedia('(min-width: 1024px)'); // PC: 왼쪽 사이드바 + 오른쪽 넓은 화면, 상세는 오른쪽 위 패널
-// AI 사진은 960px(<key>.webp)·480px(<key>-480.webp) 두 크기. 아직 AI 사진이 없는 그림은 예전 800px 누끼 한 장이라 회색 원에 넣는다.
-const OLD_IMG = new Set(['cafeteria', 'coffee', 'bread', 'dessert', 'pub', 'cat-cafe']);
-const PHOTO_ALT = { 'gukbap-bone': '뼈해장국', 'bbq-makchang': '막창' }; // 변형 사진의 음식 이름
-const foodImg = (key, alt, { lazy = true, sizes = '50vw' } = {}) => {
-  const attrs = `alt="${esc(alt)}" decoding="async"${lazy ? ' loading="lazy"' : ''}`;
-  return OLD_IMG.has(key)
-    ? `<img class="old" src="img/food/${key}.webp" width="800" height="800" ${attrs}>`
-    : `<img src="img/food/${key}.webp" srcset="img/food/${key}-480.webp 480w, img/food/${key}.webp 960w" sizes="${sizes}" width="960" height="960" ${attrs}>`;
+// 음식 사진은 모두 AI 사진: 960px(<key>.webp)·480px(<key>-480.webp) 두 크기를 srcset 으로 고른다
+const PHOTO_ALT = { // 변형 사진의 음식 이름(logic.js 의 PHOTO_VARIANTS)
+  'gukbap-bone': '뼈해장국', 'gukbap-budae': '부대찌개', 'gukbap-kimchi': '김치찌개', 'bbq-makchang': '막창',
+  'rice-ssam': '우렁쌈밥', 'burrito-bbq': '바비큐 플래터', 'sushi-nigiri': '초밥', 'sushi-udon': '우동',
 };
+const foodImg = (key, alt, { lazy = true, sizes = '50vw' } = {}) =>
+  `<img src="img/food/${key}.webp" srcset="img/food/${key}-480.webp 480w, img/food/${key}.webp 960w" sizes="${sizes}" width="960" height="960" alt="${esc(alt)}" decoding="async"${lazy ? ' loading="lazy"' : ''}>`;
 const placeImg = (p, opts) => {
   const key = foodPhoto(p);
   return foodImg(key, PHOTO_ALT[key] ?? FOOD_TYPES[foodType(p)].label, opts);
@@ -138,7 +137,8 @@ function update({ animate = true } = {}) {
   renderGrid(items, animate);
   renderFilters();
   state.spot = null;
-  drawMarkers(items);
+  drawMarkers(state.layer === 'spots' ? [] : items);
+  drawSpotPins();
   renderStrip(items);
 }
 
@@ -233,7 +233,7 @@ function renderDetail(p) {
     <button class="back glass glass-map" type="button" aria-label="뒤로">${icon('back')}</button>
     <div class="hero">${placeImg(p, { lazy: false, sizes: '(min-width: 760px) 760px, 100vw' })}</div>
     <div class="d-sheet glass" data-refract>
-      ${OLD_IMG.has(foodPhoto(p)) ? '' : '<p class="ai-note">AI 생성 이미지 · 실제 메뉴와 다를 수 있음</p>'}
+      <p class="ai-note">AI 생성 이미지 · 실제 메뉴와 다를 수 있음</p>
       <div class="d-title"><h1 tabindex="-1">${esc(p.name)}</h1><span class="badge">${p.category}</span></div>
       <p class="d-addr">${esc(SHORT[p.zone] ?? p.zone)} · ${esc(FOOD_TYPES[t].label)}</p>
       <div class="pills">
@@ -349,7 +349,12 @@ function initMap() {
   clusterer = new kakao.maps.MarkerClusterer({ map, averageCenter: true, minLevel: 5, disableClickZoom: true });
   kakao.maps.event.addListener(clusterer, 'clusterclick', cluster =>
     map.setLevel(map.getLevel() - 1, { anchor: cluster.getCenter() }));
-  drawMarkers(visible(places, filters()));
+  drawMarkers(state.layer === 'spots' ? [] : visible(places, filters()));
+  drawSpotPins();
+  // 명소 제보: 휴대폰은 지도를 길게 누르고, PC 는 오른쪽 클릭. [제보] 버튼을 누른 뒤 지도를 한 번 눌러도 된다
+  kakao.maps.event.addListener(map, 'rightclick', e => startReport(e.latLng));
+  kakao.maps.event.addListener(map, 'click', e => { if (picking) startReport(e.latLng); });
+  longPress($('map'), (x, y) => startReport(map.getProjection().coordsFromContainerPoint(new kakao.maps.Point(x, y))));
 }
 
 function drawMarkers(items) {
@@ -395,18 +400,91 @@ function select(id, move = false) {
   if (!cur) return;
   cur.marker.setImage(pinImage(cur.src, 1.3));
   cur.marker.setZIndex(10);
-  if (move) {
-    if (map.getLevel() > 4) map.setLevel(4);
-    const pos = cur.marker.getPosition();
-    if (pc.matches && current === 'detail') {
-      // 패널(폭 420 + 여백) 절반만큼 지도 중심을 오른쪽으로 옮겨, 핀이 패널에 가리지 않게 한다
-      const proj = map.getProjection(), pt = proj.containerPointFromCoords(pos);
-      map.panTo(proj.coordsFromContainerPoint(new kakao.maps.Point(pt.x + 218, pt.y)));
-    } else map.panTo(pos);
-  }
+  if (move) panToPin(cur.marker.getPosition());
+}
+
+function panToPin(pos) {
+  if (map.getLevel() > 4) map.setLevel(4);
+  if (pc.matches && current === 'detail') {
+    // 패널(폭 420 + 여백) 절반만큼 지도 중심을 오른쪽으로 옮겨, 핀이 패널에 가리지 않게 한다
+    const proj = map.getProjection(), pt = proj.containerPointFromCoords(pos);
+    map.panTo(proj.coordsFromContainerPoint(new kakao.maps.Point(pt.x + 218, pt.y)));
+  } else map.panTo(pos);
+}
+
+// ── 명소 ────────────────────────────────────────────────
+let picking = false, spotsLoaded = false, lastSpotId = null, draft = null;
+const openSpot = s => { location.hash = spotsUI.href(s); };
+function drawSpotPins() { spotsUI.drawPins(map, state.layer === 'food' ? [] : spotsUI.list, openSpot); }
+
+function setLayer(layer) {
+  if (state.layer === layer) return;
+  state.layer = layer;
+  document.body.dataset.layer = layer; // PC 명소 모드에서는 맛집용 칩·구역·정렬을 숨긴다(style.css)
+  for (const b of $('layers').children) b.setAttribute('aria-checked', b.dataset.layer === layer);
+  update({ animate: false });
+  syncTabs();
+}
+$('layers').addEventListener('click', e => {
+  const l = e.target.closest('[data-layer]')?.dataset.layer;
+  if (!l) return;
+  history.replaceState(null, '', l === 'spots' ? '#/spots' : '#/map');
+  setLayer(l);
+});
+
+function startReport(latLng) {
+  picking = false;
+  $('pick-hint').hidden = true;
+  spotsUI.open(latLng.getLat(), latLng.getLng());
+}
+$('report-btn').addEventListener('click', () => {
+  if (!map) return;
+  picking = true;
+  $('pick-hint').hidden = false;
+});
+$('pick-cancel').addEventListener('click', () => { picking = false; $('pick-hint').hidden = true; });
+
+// 터치로 길게 누르기(550ms, 10px 넘게 움직이면 취소). 카카오맵에는 길게 누르기 이벤트가 없다
+function longPress(el, onPress) {
+  let t = null, x0 = 0, y0 = 0;
+  const stop = () => { clearTimeout(t); t = null; };
+  el.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'touch') return;
+    const r = el.getBoundingClientRect();
+    x0 = e.clientX; y0 = e.clientY;
+    t = setTimeout(() => { t = null; navigator.vibrate?.(15); onPress(x0 - r.left, y0 - r.top); }, 550);
+  });
+  el.addEventListener('pointermove', e => { if (t && Math.hypot(e.clientX - x0, e.clientY - y0) > 10) stop(); });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, stop);
+}
+
+// 제보 위치에 잠깐 꽂아 두는 핀
+function draftPin(lat, lng) {
+  draft?.setMap(null);
+  draft = null;
+  if (lat == null || !map) return;
+  draft = new kakao.maps.Marker({
+    map, position: new kakao.maps.LatLng(lat, lng), zIndex: 20,
+    image: new kakao.maps.MarkerImage('img/pin-spot.svg', new kakao.maps.Size(34, 40), { offset: new kakao.maps.Point(17, 39) }),
+  });
+  draft.setOpacity(0.75);
+}
+
+function renderSpotDetail(sp) {
+  const el = $('detail');
+  el.className = 'view detail spot';
+  el.innerHTML = spotsUI.detailHtml(sp, icon);
+  el.querySelector('.back').addEventListener('click', goBack);
 }
 
 function renderStrip(items) {
+  if (state.layer === 'spots') {
+    stripItems = [];
+    $('mcount').textContent = `명소 ${spotsUI.list.length}곳`;
+    $('spot-clear').hidden = true;
+    $('strip').innerHTML = spotsUI.stripHtml(spotsUI.list);
+    return renderSide();
+  }
   stripItems = state.spot ? items.filter(p => state.spot.ids.includes(p.id)) : items;
   $('mcount').textContent = state.spot ? `${state.spot.label} · ${stripItems.length}곳` : `${stripItems.length}곳`;
   $('spot-clear').hidden = !state.spot;
@@ -424,6 +502,10 @@ function renderSide() {
   if (!pc.matches) return;
   const open = current === 'detail' ? lastDetailId : null;
   $('side-count').textContent = $('mcount').textContent;
+  if (state.layer === 'spots' && document.body.dataset.view === 'map') { // 명소 모드의 지도: 명소 목록
+    $('side-list').innerHTML = spotsUI.sideHtml(spotsUI.list, current === 'detail' ? lastSpotId : null);
+    return;
+  }
   $('side-list').innerHTML = stripItems.length ? stripItems.map(p => `
     <li><a class="side-item c-${p.category}" href="${href(p)}"${p.id === open ? ' aria-current="true"' : ''}>
       ${placeImg(p, { sizes: '56px' })}
@@ -440,6 +522,8 @@ function revealCard(id) {
 }
 
 $('strip').addEventListener('click', e => {
+  const sid = e.target.closest('[data-spot]')?.dataset.spot;
+  if (sid) return openSpot(spotsUI.byId(sid));
   const id = e.target.closest('[data-id]')?.dataset.id;
   if (!id) return;
   // 처음 누르면 지도에서 위치를 보여 주고, 한 번 더 누르면 상세로
@@ -473,11 +557,19 @@ function show(view) {
   $('detail').hidden = view !== 'detail';
   $('mapview').hidden = under !== 'map';
   $('tabbar').hidden = view === 'detail';
+  syncTabs();
+  return prev;
+}
+
+// 사이드바(홈·지도·명소)와 하단 탭 바(홈·지도)의 현재 칸 표시
+function syncTabs() {
+  const under = document.body.dataset.view;
+  const tab = under === 'map' && state.layer === 'spots' ? 'spots' : under;
   for (const t of document.querySelectorAll('[data-tab]')) {
-    if (t.dataset.tab === under) t.setAttribute('aria-current', 'page');
+    const on = t.dataset.tab === tab || (tab === 'spots' && t.dataset.tab === 'map' && t.closest('#tabbar'));
+    if (on) t.setAttribute('aria-current', 'page');
     else t.removeAttribute('aria-current');
   }
-  return prev;
 }
 
 const mapFocus = () => {
@@ -486,13 +578,32 @@ const mapFocus = () => {
 };
 
 function route() {
+  const ms = location.hash.match(/^#\/s\/(.+)$/);
+  if (ms) {
+    if (!spotsLoaded) return; // 명소를 불러온 뒤 다시 부른다
+    const sp = spotsUI.byId(decodeURIComponent(ms[1]));
+    if (!sp) return location.replace('#/spots');
+    show('detail');
+    renderSpotDetail(sp);
+    lastSpotId = sp.id; lastDetailId = null;
+    document.title = `${sp.name} · 교통여지도`;
+    if (pc.matches) $('detail').scrollTop = 0; else scrollTo(0, 0);
+    $('detail').querySelector('h1').focus({ preventScroll: true });
+    glass.refresh($('detail'));
+    animateDetail();
+    if (pc.matches) {
+      renderSide();
+      if (base === 'map' && map) panToPin(new kakao.maps.LatLng(sp.lat, sp.lng));
+    }
+    return;
+  }
   const m = location.hash.match(/^#\/p\/(.+)$/);
   if (m) {
     const p = byId.get(decodeURIComponent(m[1]));
     if (!p) return location.replace('#/');
     show('detail');
     renderDetail(p);
-    lastDetailId = p.id;
+    lastDetailId = p.id; lastSpotId = null;
     document.title = `${p.name} · 교통여지도`;
     if (pc.matches) $('detail').scrollTop = 0; else scrollTo(0, 0);
     $('detail').querySelector('h1').focus({ preventScroll: true });
@@ -504,10 +615,16 @@ function route() {
     }
     return;
   }
-  if (/^#\/map(\/|$)/.test(location.hash)) {
+  const spotsRoute = /^#\/spots(\/|$)/.test(location.hash);
+  if (spotsRoute || /^#\/map(\/|$)/.test(location.hash)) {
+    // #/spots 는 명소 모드, #/map 은 맛집(또는 고른 '함께')
+    const want = spotsRoute ? 'spots' : state.layer === 'spots' ? 'food' : state.layer;
     const prev = show('map');
+    setLayer(want);
     document.title = '지도 · 교통여지도';
     ensureMap(mapFocus());
+    const focusSpot = spotsRoute && spotsUI.byId(decodeURIComponent(location.hash.split('/')[2] ?? ''));
+    if (focusSpot && map) panToPin(new kakao.maps.LatLng(focusSpot.lat, focusSpot.lng));
     renderSide();
     if (prev !== 'map' && !(pc.matches && prev === 'detail')) motion.mapIn($('mapview').querySelector('.map-top'), [...$('strip').children].slice(0, 4));
     return;
@@ -522,11 +639,11 @@ function route() {
 
 // 가게로 가는 링크를 누르는 순간 그 사진 칸의 자리를 기억해 둔다(상세 사진이 그 자리에서 커진다)
 document.addEventListener('click', e => {
-  const box = e.target.closest('a[href^="#/p/"]')?.querySelector('.ph, img');
+  const box = e.target.closest('a[href^="#/p/"], a[href^="#/s/"]')?.querySelector('.ph, img');
   if (!box) return;
   const r = box.getBoundingClientRect();
   const img = box.tagName === 'IMG' ? box : box.querySelector('img');
-  pendingFrom = { left: r.left, top: r.top, width: r.width, height: r.height, radius: 20, src: img?.currentSrc || img?.src, old: !!img?.classList.contains('old') };
+  pendingFrom = { left: r.left, top: r.top, width: r.width, height: r.height, radius: 20, src: img?.currentSrc || img?.src };
 }, true);
 addEventListener('hashchange', () => { inAppNav++; route(); });
 
@@ -553,6 +670,13 @@ async function start() {
   update({ animate: false });
   route();
   glass.refresh();
+  spotsUI.init({ box: limitBox(places), draftPin, onSaved: () => spotsUI.load().then(() => update({ animate: false })) });
+  // 명소는 첫 화면을 늦추지 않게 따로 불러오고, 오면 지도·목록을 다시 그린다
+  spotsUI.load().then(() => {
+    spotsLoaded = true;
+    update({ animate: false });
+    if (/^#\/s\//.test(location.hash) || /^#\/spots\//.test(location.hash)) route();
+  });
   pc.addEventListener('change', () => {
     placeControls();
     update({ animate: false });
