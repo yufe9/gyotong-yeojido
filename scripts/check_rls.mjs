@@ -41,20 +41,60 @@ check('올린 사진은 공개 주소로 보인다(지워지지 않았다)', r.o
 r = await insert(row({ status: 'approved', photos: [path] }));
 check('익명은 처음부터 "승인" 상태로 쓸 수 없다', !r.ok, `${r.status} ${r.ok ? '' : (await r.json()).code}`);
 
-r = await insert(row({ photos: ['https://example.com/x.jpg'] }));
+r = await insert(row({ photos: [path] }));
+check('익명은 표에 바로 제보할 수 없다(회원 함수로만)', !r.ok, r.status);
+
+// ── 회원·별점 ──
+const rpc = (fn, body) => req(`/rest/v1/rpc/${fn}`, { method: 'POST', headers: json, body: JSON.stringify(body) });
+const testNo = String(9000000 + Math.floor(Math.random() * 999999));
+r = await rpc('member_enter', { p_student_no: testNo, p_name: '확인용', p_nickname: `확인${testNo.slice(-6)}` });
+const m = r.ok ? await r.json() : {};
+check('학번과 이름으로 가입할 수 있다', r.ok && !!m.token, r.status);
+
+r = await rpc('member_enter', { p_student_no: testNo, p_name: '다른이름' });
+check('이름이 다르면 들어올 수 없다', !r.ok, r.status);
+
+r = await rpc('spot_submit', { p_token: crypto.randomUUID(), p: row({ photos: [path] }) });
+check('토큰이 틀리면 제보할 수 없다', !r.ok, r.status);
+
+r = await rpc('spot_submit', { p_token: m.token, p: row({ photos: ['https://example.com/x.jpg'] }) });
 check('보관함 밖 사진 주소는 받지 않는다', !r.ok, r.status);
 
-r = await insert(row({ photos: [] }));
+r = await rpc('spot_submit', { p_token: m.token, p: row({ photos: [] }) });
 check('사진 0장 제보는 받지 않는다', !r.ok, r.status);
 
-r = await insert(row({ lat: 37.5665, lng: 126.978, photos: [path] }));
+r = await rpc('spot_submit', { p_token: m.token, p: row({ lat: 37.5665, lng: 126.978, photos: [path] }) });
 check('지도 범위 밖 좌표는 받지 않는다', !r.ok, r.status);
 
-r = await insert(row({ photos: [path] }));
-check('익명이 "대기" 상태로 제보할 수 있다', r.status === 201, r.status);
+r = await rpc('spot_submit', { p_token: m.token, p: row({ photos: [path] }) });
+check('회원은 "대기" 상태로 제보할 수 있다', r.ok, r.status);
 
-r = await insert(row({ photos: [path] }), 'return=representation');
-check('익명은 방금 쓴 대기 제보도 돌려받지 못한다', !r.ok, r.status);
+const review = (rating, body) => rpc('review_save', { p_token: m.token, p_kind: 'place', p_target: 'RLS 확인용', p_rating: rating, p_body: body });
+r = await review(4, '확인용 댓글입니다');
+check('회원은 별점과 댓글을 남길 수 있다', r.ok, r.status);
+
+r = await review(4, '씨 1 발');
+check('비속어는 저장되지 않는다', !r.ok, r.status);
+
+r = await review(9, null);
+check('별점 범위 밖은 저장되지 않는다', !r.ok, r.status);
+
+r = await req('/rest/v1/review_stats?select=n,total&target_id=eq.RLS%20%ED%99%95%EC%9D%B8%EC%9A%A9');
+const stat = r.ok ? await r.json() : [];
+check('누구나 별점 집계를 볼 수 있다', stat[0]?.n === 1 && stat[0]?.total === 4, r.status);
+
+r = await req('/rest/v1/reviews?select=member_id');
+check('익명은 글쓴이 id 를 볼 수 없다', !r.ok, r.status);
+
+r = await req('/rest/v1/reviews', { method: 'POST', headers: json, body: JSON.stringify({ member_id: crypto.randomUUID(), nickname: 'x', kind: 'place', target_id: 'y', rating: 5 }) });
+check('익명은 별점 표에 바로 쓸 수 없다', !r.ok, r.status);
+
+r = await req('/rest/v1/members?select=student_no,name,token');
+check('익명은 회원 학번·이름을 볼 수 없다', !r.ok, r.status);
+
+r = await rpc('member_delete', { p_token: m.token });
+r = await req('/rest/v1/review_stats?select=n&target_id=eq.RLS%20%ED%99%95%EC%9D%B8%EC%9A%A9');
+check('탈퇴하면 별점도 지워진다', r.ok && (await r.json()).length === 0, r.status);
 
 r = await req('/rest/v1/landmarks?select=id,status&status=neq.approved');
 const hidden = r.ok ? await r.json() : null;

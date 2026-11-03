@@ -1,7 +1,8 @@
-import { ZONES, CATEGORIES, FOOD_TYPES, visible, spots, limitBox, clamp, distanceText, foodType, foodPhoto, topPicks, countBy } from './logic.js';
+import { ZONES, CATEGORIES, FOOD_TYPES, visible, spots, limitBox, clamp, distanceText, foodType, foodPhoto, topPicks, countBy, blendRating } from './logic.js';
 import * as motion from './motion.js';
 import * as glass from './glass.js';
 import * as spotsUI from './spots.js';
+import * as member from './member.js';
 
 // JavaScript 키는 브라우저에 공개된다. 카카오 콘솔의 JavaScript SDK 도메인 제한으로 보호한다.
 const KAKAO_JS_KEY = 'fcc7025814ea14defac67db2babb5c5a';
@@ -58,17 +59,7 @@ function buildHome() {
   $('zones').innerHTML = ZONES.map(z =>
     `<button type="button" role="radio" data-zone="${esc(z)}" aria-checked="false">${esc(SHORT[z] ?? z)}</button>`).join('');
 
-  const picks = topPicks(places, 5);
-  $('picks').innerHTML = picks.map(p => `
-    <a class="pick glass c-${p.category}" href="${href(p)}">
-      <span class="txt">
-        <span class="eyebrow">★ ${p.rating.toFixed(1)} · 추천 ${p.recommendCount}명 · ${esc(SHORT[p.zone] ?? p.zone)}</span>
-        <span class="title">${esc(p.name)}</span>
-        <span class="line">${esc(p.summary)}</span>
-      </span>
-      ${placeImg(p, { lazy: false, sizes: '40vw' })}
-    </a>`).join('');
-  $('dots').innerHTML = picks.map((_, i) => `<span class="${i ? '' : 'on'}"></span>`).join('');
+  renderPicks();
 
   // 카드는 한 번만 만들고, 필터는 보이기·순서만 바꾼다(FLIP 재배치를 위해 같은 요소를 유지).
   $('grid').innerHTML = places.map(p => {
@@ -86,6 +77,37 @@ function buildHome() {
   }).join('') + '<li class="empty is-hidden">조건에 맞는 곳이 없어요. 필터를 지워 보세요.</li>';
   cardEls = new Map([...$('grid').querySelectorAll('.card')].map(li => [li.dataset.id, li]));
   motion.hoverLift($('grid'), '.card > a');
+}
+
+function renderPicks() {
+  const picks = topPicks(places, 5);
+  $('picks').innerHTML = picks.map(p => `
+    <a class="pick glass c-${p.category}" href="${href(p)}">
+      <span class="txt">
+        <span class="eyebrow">★ ${p.rating.toFixed(1)} · 추천 ${p.recommendCount}명 · ${esc(SHORT[p.zone] ?? p.zone)}</span>
+        <span class="title">${esc(p.name)}</span>
+        <span class="line">${esc(p.summary)}</span>
+      </span>
+      ${placeImg(p, { lazy: false, sizes: '40vw' })}
+    </a>`).join('');
+  $('dots').innerHTML = picks.map((_, i) => `<span class="${i ? '' : 'on'}"></span>`).join('');
+}
+
+// 학생 별점을 섞어 p.rating 을 바꾼다. 그러면 카드·추천·정렬·상세가 모두 같은 값을 쓴다(places.json 은 그대로)
+async function refreshRatings() {
+  const stats = await member.loadStats();
+  if (!stats.size && !places.some(p => p.baseRating != null)) return;
+  for (const p of places) {
+    p.baseRating ??= p.rating;
+    const s = stats.get(`place:${p.id}`);
+    p.rating = blendRating(p.baseRating, s?.n ?? 0, s?.total ?? 0);
+    const meta = cardEls.get(p.id)?.querySelector('.meta');
+    if (meta) meta.innerHTML = metaLine(p);
+  }
+  renderPicks();
+  update({ animate: false });
+  const shown = $('detail').querySelector('.rating-n');
+  if (shown && lastDetailId) shown.textContent = byId.get(lastDetailId).rating.toFixed(1);
 }
 
 function syncControls() {
@@ -237,7 +259,7 @@ function renderDetail(p) {
       <div class="d-title"><h1 tabindex="-1">${esc(p.name)}</h1><span class="badge">${p.category}</span></div>
       <p class="d-addr">${esc(SHORT[p.zone] ?? p.zone)} · ${esc(FOOD_TYPES[t].label)}</p>
       <div class="pills">
-        <span class="pill star">${icon('star')}<span><span class="visually-hidden">별점 </span>${p.rating.toFixed(1)}</span></span>
+        <span class="pill star">${icon('star')}<span><span class="visually-hidden">별점 </span><span class="rating-n">${p.rating.toFixed(1)}</span></span></span>
         <span class="pill">${icon('walk')}<span><span class="visually-hidden">교통대에서 걷는 거리 </span>${distanceText(p.distanceKm)}</span></span>
         <span class="pill">${icon('people')}추천 ${p.recommendCount}명</span>
       </div>
@@ -247,12 +269,14 @@ function renderDetail(p) {
         </div>
         ${panels.map((html, i) => `<div class="panel" role="tabpanel" id="panel-${i}" aria-labelledby="tab-${i}" tabindex="0"${i ? ' hidden' : ''}>${html}</div>`).join('')}
       </div>
+      <section class="reviews" aria-label="별점과 댓글"></section>
     </div>
     <div class="actions glass glass-map">
       <a class="btn primary" href="#/map/${encodeURIComponent(p.id)}">${icon('pin')}지도에서 보기</a>
       ${naver ? `<a class="btn secondary" href="${esc(naver)}" target="_blank" rel="noopener">${icon('out')}네이버에서 보기</a>` : ''}
     </div>`;
   el.querySelector('.back').addEventListener('click', goBack);
+  member.mountReviews(el.querySelector('.reviews'), { kind: 'place', id: p.id, base: p.baseRating ?? p.rating, onChanged: refreshRatings });
   const tabs = [...el.querySelectorAll('[role="tab"]')];
   const pick = i => tabs.forEach((b, j) => {
     b.setAttribute('aria-selected', i === j);
@@ -474,6 +498,7 @@ function renderSpotDetail(sp) {
   const el = $('detail');
   el.className = 'view detail spot';
   el.innerHTML = spotsUI.detailHtml(sp, icon);
+  member.mountReviews(el.querySelector('.reviews'), { kind: 'spot', id: sp.id, base: null });
   el.querySelector('.back').addEventListener('click', goBack);
   const hero = el.querySelector('.hero');
   const zoom = e => { const img = e.target.closest('[data-zoom]'); if (img) spotsUI.openViewer(sp, +img.dataset.zoom, img); };
@@ -669,11 +694,13 @@ async function start() {
     $('grid').innerHTML = '<li class="empty">데이터를 불러오지 못했어요. 새로고침해 주세요.</li>';
     return;
   }
+  member.init();
   buildHome();
   placeControls();
   update({ animate: false });
   route();
   glass.refresh();
+  refreshRatings();
   spotsUI.init({ box: limitBox(places), draftPin, onSaved: () => spotsUI.load().then(() => update({ animate: false })) });
   // 명소는 첫 화면을 늦추지 않게 따로 불러오고, 오면 지도·목록을 다시 그린다
   spotsUI.load().then(() => {

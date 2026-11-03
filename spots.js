@@ -3,6 +3,7 @@
 import { SPOT_KINDS, REPORT_LIMITS, validateReport } from './logic.js';
 import * as supa from './supa.js';
 import * as motion from './motion.js';
+import * as member from './member.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -75,6 +76,7 @@ export function detailHtml(s, icon) {
         <p class="quote">“${esc(s.summary)}”</p>
         <p class="detail-text spot-body">${esc(s.body)}</p>
       </div>
+      <section class="reviews" aria-label="별점과 댓글"></section>
     </div>
     <div class="actions glass glass-map">
       <a class="btn primary" href="#/spots/${encodeURIComponent(s.id)}">${icon('pin')}지도에서 보기</a>
@@ -181,6 +183,8 @@ function drawPhotos() {
 function showError(msg) { $('report-error').textContent = msg; }
 
 export async function open(lat, lng) {
+  // 제보는 회원만(운영자는 로그인 없이 바로 공개)
+  if (!member.current() && !(await supa.isAdmin()) && !(await member.ask())) return;
   const form = $('report-form');
   form.reset();
   draft = { lat, lng, blobs: [], admin: false };
@@ -206,7 +210,7 @@ async function submit(e) {
   // form.name 은 폼 자체의 이름이라 이름 칸은 namedItem 으로 읽는다
   const input = {
     name: form.elements.namedItem('name').value, kind: form.kind.value, summary: form.summary.value, body: form.body.value,
-    bestTime: form.bestTime.value, nickname: form.nickname.value, website: form.website.value,
+    bestTime: form.bestTime.value, nickname: '', website: form.website.value,
     lat: draft.lat, lng: draft.lng, photos: draft.blobs,
   };
   const v = validateReport(input, ctx.box);
@@ -227,8 +231,8 @@ async function submit(e) {
   try {
     const photos = [];
     for (const b of draft.blobs) photos.push(await supa.uploadPhoto(b));
-    // 익명은 대기 행을 다시 읽을 수 없으므로(RLS) 결과를 돌려받지 않는다
-    await supa.rest('/landmarks', { method: 'POST', body: { ...v.value, photos, status: admin ? 'approved' : 'pending' }, prefer: 'return=minimal' });
+    if (admin) await supa.rest('/landmarks', { method: 'POST', body: { ...v.value, photos, status: 'approved' }, prefer: 'return=minimal' });
+    else await member.call('spot_submit', { p: { ...v.value, photos } });
     try { localStorage.setItem(COOLDOWN_KEY, String(Date.now())); } catch { /* 무시 */ }
     form.hidden = true;
     $('report-done').hidden = false;

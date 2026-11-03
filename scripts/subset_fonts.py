@@ -17,7 +17,7 @@ CACHE = os.path.join(ROOT, 'scripts', '.cache', 'fonts')
 VERSION = '1.3.9'
 WEIGHTS = ['Regular', 'SemiBold', 'Bold']
 SRC = 'https://cdn.jsdelivr.net/npm/pretendard@{v}/dist/web/static/woff2/Pretendard-{w}.woff2'
-TEXT_FILES = ['index.html', 'app.js', 'logic.js', 'motion.js', 'spots.js', 'admin.html', 'admin.js', 'supa.js']
+TEXT_FILES = ['index.html', 'app.js', 'logic.js', 'motion.js', 'spots.js', 'admin.html', 'admin.js', 'supa.js', 'member.js']
 
 
 def strings(v):

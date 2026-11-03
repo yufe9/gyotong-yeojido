@@ -47,6 +47,7 @@
   <main id="home" class="view home" aria-labelledby="home-title">
     <header class="home-head">
       <h1 id="home-title" class="large-title">교통여지도</h1>
+      <button type="button" id="account-btn" class="account-btn glass">로그인</button>
       <p class="lede">교통대생이 추천한 충주 맛집 94곳</p>
       <label class="search glass" data-refract>
         <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
@@ -134,7 +135,7 @@
     <h2 id="help-title">교통여지도</h2>
     <p>한국교통대 학생들이 추천한 충주 맛집·카페·주점을 원유철이 직접 다니며 정리한 지도입니다.</p>
     <ul>
-      <li><b>별점</b>: 원유철이 같은 기준으로 매긴 5점 만점 점수</li>
+      <li><b>별점</b>: 원유철 별점과 학생들의 별점을 합친 평균(평가한 사람이 3명 미만이면 원유철 별점)</li>
       <li><b>추천 수</b>: 그곳을 적어 낸 학생 수</li>
       <li><b>거리</b>: 교통대(대학로 50)에서 걷는 길 거리</li>
       <li id="help-date"></li>
@@ -155,7 +156,6 @@
       <label class="field"><span>한 줄 소개</span><input name="summary" maxlength="60" autocomplete="off" placeholder="예: 해 질 녘 남한강이 붉게 물드는 곳"></label>
       <label class="field"><span>여기가 좋은 이유 <small id="body-count">0/500</small></span><textarea name="body" rows="5" maxlength="500" placeholder="20자 이상으로 적어 주세요"></textarea></label>
       <label class="field"><span>추천 시간대·계절 <small>(선택)</small></span><input name="bestTime" maxlength="40" autocomplete="off" placeholder="예: 가을 저녁 6시"></label>
-      <label class="field"><span>닉네임 <small>(선택)</small></span><input name="nickname" maxlength="20" autocomplete="off"></label>
       <div class="field" role="group" aria-labelledby="photos-label">
         <span id="photos-label">사진 1~3장</span>
         <div id="report-photos" class="report-photos"></div>
@@ -176,6 +176,39 @@
     <div id="report-done" class="report-done" hidden>
       <p id="report-done-text"></p>
       <button type="button" id="report-close" class="btn primary">닫기</button>
+    </div>
+  </dialog>
+
+  <!-- 회원: 학번 + 이름. 처음이면 바로 가입된다 -->
+  <dialog id="member" class="glass glass-map report" aria-labelledby="member-title">
+    <form id="member-form" novalidate>
+      <h2 id="member-title">학번으로 들어가기</h2>
+      <p class="report-where">별점·댓글·명소 제보는 회원만 쓸 수 있어요. 처음이면 바로 가입됩니다.</p>
+      <label class="field"><span>학번</span><input name="studentNo" inputmode="numeric" maxlength="10" autocomplete="off"></label>
+      <label class="field"><span>이름</span><input name="studentName" maxlength="20" autocomplete="off"></label>
+      <label class="field"><span>닉네임 <small>(처음 한 번만)</small></span><input name="nickname" maxlength="12" autocomplete="off"></label>
+      <ul class="report-notice">
+        <li>학번·이름은 회원 확인에만 쓰고 공개하지 않아요. 화면에는 닉네임만 보입니다.</li>
+        <li>비밀번호가 없어 내 학번과 이름을 아는 사람은 내 계정으로 들어올 수 있어요.</li>
+        <li>탈퇴하면 학번·이름과 내 별점·댓글이 지워집니다.</li>
+      </ul>
+      <p id="member-error" class="report-error" role="alert"></p>
+      <div class="report-actions">
+        <button type="button" id="member-cancel" class="btn secondary">취소</button>
+        <button type="submit" id="member-submit" class="btn primary">들어가기</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="account" class="glass glass-map report" aria-labelledby="account-title">
+    <h2 id="account-title"></h2>
+    <p class="report-where">내가 제보한 명소</p>
+    <ul id="account-spots" class="account-spots"></ul>
+    <p id="account-error" class="report-error" role="alert"></p>
+    <div class="report-actions">
+      <button type="button" id="account-delete" class="btn secondary">탈퇴</button>
+      <button type="button" id="account-logout" class="btn secondary">로그아웃</button>
+      <button type="button" id="account-close" class="btn primary">닫기</button>
     </div>
   </dialog>
 

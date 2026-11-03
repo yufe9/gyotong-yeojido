@@ -533,3 +533,27 @@ html:has(dialog.viewer[open]) { overflow: hidden; } /* 보는 동안 뒤 페이�
 #viewer-orig { margin-left: auto; }
 .viewer-btn { min-width: 44px; min-height: 44px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 999px; background: rgba(0, 0, 0, .55); color: #fff; font: var(--t-sub); text-decoration: none; cursor: pointer; }
 .viewer-x { padding: 0; font-size: 26px; line-height: 1; }
+/* ── 회원·별점·댓글 ── */
+.home-head { position: relative; }
+.account-btn { position: absolute; top: 0; right: 0; min-height: 44px; max-width: 45%; padding: 0 var(--s4); border: 0; border-radius: 999px; color: var(--label); font: 600 14px/1 var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.account-spots { list-style: none; padding: 0; margin: var(--s2) 0; max-height: 200px; overflow-y: auto; }
+.account-spots li { display: flex; justify-content: space-between; gap: var(--s3); padding: var(--s2) 0; border-bottom: 1px solid var(--separator); }
+.account-spots small { flex: none; color: var(--label-2); }
+.reviews { margin-top: var(--s6); padding-top: var(--s5); border-top: 1px solid var(--separator); }
+.reviews h2 { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s2); font: var(--t-title); }
+.reviews h2 small { font: var(--t-sub); color: var(--label-2); }
+.review-login { width: 100%; margin-top: var(--s3); }
+.review-form { margin-top: var(--s3); }
+.review-form textarea { width: 100%; padding: var(--s3); border: 0; border-radius: var(--r-md); background: var(--snow); color: var(--label); font: var(--t-body); box-shadow: inset 0 0 0 1px var(--separator); resize: vertical; }
+.review-form .report-actions { display: flex; justify-content: flex-end; }
+#account .report-actions { grid-template-columns: 1fr 1fr 1fr; }
+.stars { display: inline-flex; flex-direction: row-reverse; margin: 0 0 var(--s2); padding: 0; border: 0; }
+.stars label { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; font-size: 28px; line-height: 1; color: #7a8d9a; cursor: pointer; }
+.stars input:checked ~ label, .stars label:hover, .stars label:hover ~ label { color: var(--star); }
+.stars input:focus-visible + label { outline: 3px solid var(--accent); outline-offset: -3px; border-radius: var(--r-md); }
+.review-msg { font: var(--t-sub); color: var(--label-2); }
+.review-list { list-style: none; padding: 0; margin: var(--s4) 0 0; }
+.review-list li { padding: var(--s3) 0; border-top: 1px solid var(--separator); font: var(--t-body); overflow-wrap: anywhere; }
+.review-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); font: var(--t-sub); color: var(--label-2); }
+.review-report { min-height: 44px; margin: -12px 0 -12px auto; padding: 0 var(--s2); border: 0; background: none; color: var(--label-2); font: var(--t-sub); text-decoration: underline; cursor: pointer; }
+.admin-review { grid-template-columns: 1fr; }

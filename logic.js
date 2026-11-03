@@ -197,3 +197,10 @@ export function validateReport(input, box) {
 }
 
 export const byStatus = (list, status) => list.filter(l => l.status === status);
+
+// 별점 합치기: 원유철 별점도 한 표로 평균에 넣는다. 평가한 사람이 3명이 안 되면 한 명의 점수가 평균을 흔드니 평균을 내지 않는다.
+export const MIN_RATERS = 3;
+export function blendRating(base, n, total) {
+  const raters = n + (base == null ? 0 : 1);
+  return raters < MIN_RATERS ? base : (total + (base ?? 0)) / raters;
+}

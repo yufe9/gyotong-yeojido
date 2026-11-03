@@ -53,6 +53,8 @@ export async function rest(path, { method = 'GET', body, prefer } = {}) {
   return r.status === 204 || !(r.headers.get('content-type') || '').includes('json') ? null : r.json();
 }
 
+export const rpc = (fn, body = {}) => rest(`/rpc/${fn}`, { method: 'POST', body });
+
 // 승인된 명소(누구나). 실패하면 부르는 쪽에서 빈 목록으로 — 맛집 지도는 그대로 쓴다.
 export const approvedSpots = () => rest('/landmarks?select=*&status=eq.approved&order=created_at.desc');
 

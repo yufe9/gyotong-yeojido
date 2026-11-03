@@ -22,6 +22,7 @@
 
 ### 처음 한 번 설정하기 (약 10분)
 
+0. **회원·별점·댓글을 켜려면** 아래 1번을 다시 실행한다(회원 표와 함수가 추가된다). 금칙어는 SQL Editor 에서 `insert into public.banned_words values ('낱말');` 로 늘린다. 학번·이름은 `members` 표에만 있고 API 로 읽을 수 없다.
 1. **표·보관함 만들기** — [supabase.com](https://supabase.com) → `gyotong-yeojido` 프로젝트 → 왼쪽 **SQL Editor** → **New query** → `supabase/schema.sql` 내용을 **전부** 붙여넣고 **Run**. 여러 번 다시 실행해도 안전하다.
 2. **운영자 등록** — 같은 SQL Editor에서 새 쿼리로 아래 한 줄을 **내 이메일로 바꿔서** Run. (이메일은 저장소 파일에 쓰지 않는다.)
    ```sql

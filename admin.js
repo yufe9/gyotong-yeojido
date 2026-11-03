@@ -9,6 +9,8 @@ const when = iso => new Date(iso).toLocaleString('ko-KR', { dateStyle: 'medium',
 const STATUS_TEXT = { pending: '대기', approved: '승인됨', rejected: '거절됨' };
 
 let all = [];
+let reviews = [];
+let members = new Map();
 let tab = 'pending';
 
 function screen(name) {
@@ -27,16 +29,47 @@ async function load() {
     all = [];
     msg(`불러오지 못했어요: ${e.message}`);
   }
+  try {
+    [reviews, members] = await Promise.all([
+      supa.rest('/reviews?select=*&order=hidden.desc,report_count.desc,created_at.desc&limit=300'),
+      supa.rest('/members?select=id,student_no,name,nickname,suspended').then(rows => new Map(rows.map(m => [m.id, m]))),
+    ]);
+  } catch {
+    reviews = []; // schema.sql 을 다시 실행하기 전
+  }
   render();
 }
 
 function render() {
   for (const b of $('status-tabs').children) {
     b.setAttribute('aria-selected', b.dataset.status === tab);
-    b.querySelector('.n').textContent = byStatus(all, b.dataset.status).length;
+    b.querySelector('.n').textContent = b.dataset.status === 'reviews' ? reviews.filter(r => r.hidden || r.report_count).length : byStatus(all, b.dataset.status).length;
+  }
+  if (tab === 'reviews') {
+    $('items').innerHTML = reviews.length ? reviews.map(reviewCard).join('') : '<li class="empty">아직 별점·댓글이 없어요.</li>';
+    return;
   }
   const items = byStatus(all, tab);
   $('items').innerHTML = items.length ? items.map(card).join('') : `<li class="empty">${STATUS_TEXT[tab]} 상태인 제보가 없어요.</li>`;
+}
+
+// 신고되거나 숨겨진 글이 위에 온다
+function reviewCard(r) {
+  const m = members.get(r.member_id);
+  const where = r.kind === 'spot' ? all.find(l => l.id === r.target_id)?.name ?? '지워진 명소' : r.target_id;
+  return `
+  <li class="glass admin-item admin-review" data-rid="${esc(r.id)}" data-mid="${esc(r.member_id)}">
+    <div class="admin-fields">
+      <p class="admin-meta">${esc(where)} · ★ ${r.rating} · 신고 ${r.report_count}건${r.hidden ? ' · 숨겨짐' : ''}</p>
+      <p class="admin-meta">${esc(r.nickname)} (${esc(m?.student_no)} ${esc(m?.name)})${m?.suspended ? ' · 글쓰기 정지됨' : ''} · ${esc(when(r.created_at))}</p>
+      <p>${esc(r.body ?? '(댓글 없이 별점만)')}</p>
+      <div class="admin-actions">
+        <button type="button" class="btn secondary" data-rv="${r.hidden ? 'show' : 'hide'}">${r.hidden ? '복구' : '숨기기'}</button>
+        <button type="button" class="btn secondary" data-rv="delete">지우기</button>
+        <button type="button" class="btn secondary" data-rv="${m?.suspended ? 'resume' : 'suspend'}">${m?.suspended ? '정지 풀기' : '글쓰기 정지'}</button>
+      </div>
+    </div>
+  </li>`;
 }
 
 function card(l) {
@@ -56,7 +89,7 @@ function card(l) {
       ? l.photos.map((p, i) => `<a href="${esc(supa.photoUrl(p))}" target="_blank" rel="noopener"><img src="${esc(supa.photoUrl(p))}" alt="${esc(l.name)} 사진 ${i + 1}" loading="lazy"></a>`).join('')
       : '<span class="admin-nophoto">사진 없음(지워짐)</span>'}</div>
     <div class="admin-fields">
-      <p class="admin-meta">${esc(when(l.created_at))} · ${esc(l.nickname || '익명')} · <a href="${esc(map)}" target="_blank" rel="noopener">위치 보기 (${l.lat.toFixed(5)}, ${l.lng.toFixed(5)})</a></p>
+      <p class="admin-meta">${esc(when(l.created_at))} · ${esc(l.nickname || '익명')}${members.get(l.member_id) ? ` (${esc(members.get(l.member_id).student_no)})` : ''} · <a href="${esc(map)}" target="_blank" rel="noopener">위치 보기 (${l.lat.toFixed(5)}, ${l.lng.toFixed(5)})</a></p>
       <label class="field"><span>이름</span><input name="name" value="${esc(l.name)}" maxlength="40"></label>
       <label class="field"><span>종류</span><select name="kind">${kinds}</select></label>
       <label class="field"><span>한 줄 소개</span><input name="summary" value="${esc(l.summary)}" maxlength="60"></label>
@@ -74,9 +107,25 @@ function edits(li) {
   return { name: v('name'), kind: v('kind'), summary: v('summary'), body: v('body'), best_time: v('best_time') || null, nickname: v('nickname') || null };
 }
 
+const patchReview = (id, body) => supa.rest(`/reviews?id=eq.${id}`, { method: 'PATCH', body, prefer: 'return=minimal' });
 const patch = (id, body) => supa.rest(`/landmarks?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', body, prefer: 'return=minimal' });
 
 $('items').addEventListener('click', async e => {
+  const rv = e.target.closest('[data-rv]');
+  if (rv) {
+    const li = rv.closest('[data-rid]'), id = encodeURIComponent(li.dataset.rid), mid = encodeURIComponent(li.dataset.mid);
+    const act = rv.dataset.rv;
+    if (act === 'delete' && !confirm('이 글을 지울까요?')) return;
+    try {
+      if (act === 'show' || act === 'hide') await patchReview(id, { hidden: act === 'hide' });
+      if (act === 'delete') await supa.rest(`/reviews?id=eq.${id}`, { method: 'DELETE', prefer: 'return=minimal' });
+      if (act === 'suspend' || act === 'resume') await supa.rest(`/members?id=eq.${mid}`, { method: 'PATCH', body: { suspended: act === 'suspend' }, prefer: 'return=minimal' });
+      await load();
+    } catch (err) {
+      msg(`처리하지 못했어요: ${err.message}`);
+    }
+    return;
+  }
   const btn = e.target.closest('[data-act]');
   if (!btn) return;
   const li = btn.closest('[data-id]'), l = all.find(x => x.id === li.dataset.id);

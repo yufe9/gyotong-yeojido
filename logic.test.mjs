@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { visible, spots, limitBox, clamp, distanceText, SORTS, FOOD_TYPES, foodType, foodPhoto, search, topPicks, countBy,
-  SPOT_KINDS, REPORT_LIMITS, inBox, validateReport, byStatus } from './logic.js';
+  SPOT_KINDS, REPORT_LIMITS, inBox, validateReport, byStatus, blendRating } from './logic.js';
 
 const { places } = JSON.parse(readFileSync(new URL('./data/places.json', import.meta.url), 'utf8'));
 const all = new Set(['음식점', '카페', '주점']);
@@ -193,4 +193,12 @@ test('상태별로 거른다', () => {
   assert.deepEqual(byStatus(list, 'approved').map(l => l.id), [2, 4]);
   assert.deepEqual(byStatus(list, 'pending').map(l => l.id), [1]);
   assert.deepEqual(byStatus(list, 'nope'), []);
+});
+
+test('별점은 원유철 별점을 한 표로 섞고, 3명이 안 되면 평균을 내지 않는다', () => {
+  assert.equal(blendRating(4, 0, 0), 4);
+  assert.equal(blendRating(4, 1, 1), 4, '2명: 원래 별점 유지');
+  assert.equal(blendRating(4, 2, 2), 2, '3명: (4+1+1)/3');
+  assert.equal(blendRating(null, 2, 10), null, '명소는 2명까지 평균 없음');
+  assert.equal(blendRating(null, 3, 12), 4, '명소 3명');
 });
